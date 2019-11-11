@@ -67,12 +67,10 @@ class Player:
                 n = counter[color]
         return mostCommon
 
-
     def draw(self):
         """Draws a card from the draw pile."""
         #add probability distribution updates here
         hand.append(DrawPile.draw())
-
 
     def chooseCard(self):
         "Chooses a card to play from hand."
@@ -197,7 +195,6 @@ class Game:
             cls.currentValue = card.value
         cls.currentPlayer += cls.direction
 
-
     @classmethod
     def actionCheck(cls, card):
         """Carries out any effects triggered by an action card."""
@@ -226,5 +223,3 @@ p4 = Player()
 DrawPile.init()
 DrawPile.startdeal()
 bot.initPDists()
-
-print(bot.drawPDist)
