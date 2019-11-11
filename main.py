@@ -1,8 +1,10 @@
 import random
 #ACTION ITEMS
-#create Player function to check if a the card drawn is playable. This is for the instance when there are no legal moves.
+#general code improvements. this has been super quick. probably much better ways to do some things
 #create function that plays a single round. starting at the bot. Keep going until it is the bot's turn again.
 #set up while loop that will run a game to completion
+#end of game detection
+
 
 class Player:
     """Base class for player operations"""
@@ -25,7 +27,7 @@ class Player:
             self.drawPDist[card] = 0
 
         self.playerPDist = {}
-        for other in self.all:
+        for other in self.all_:
             if other != self:
                 self.playerPDist[other] = self.drawPDist.copy()
 
@@ -76,6 +78,8 @@ class Player:
         "Chooses a card to play from hand."
         #insert foward searching here
         validMoves = self.genValidMoves()
+        if len(validMoves) == 0:
+            return False
         card = random.choice(validMoves)
         self.hand.remove(card)
         return card
@@ -179,13 +183,18 @@ class Game:
     @classmethod
     def singlePlay(cls):
         """Carries out a single play for the next player."""
-        #Incomplete, probability stuff will probably be added here.
-        card = Player.all_[cls.currentPlayer].chooseCard()
-        DiscardPile.add(card)
-        if card.color == 'wild':
-            cls.currentColor = Player.all_[cls.currentPlayer].chooseColor()
-        action = cls.actionCheck(card)
-        cls.currentValue = card.valye
+        #Complete - probability stuff.
+        currentPlayer = Player.all_[cls.currentPlayer]
+        card = currentPlayer.chooseCard()
+        if card == False:
+            currentPlayer.draw()
+            card = currentPlayer.chooseCard()
+        if card != False:
+            DiscardPile.add(card)
+            if card.color == 'wild':
+                cls.currentColor = currentPlayer.chooseColor()
+            action = cls.actionCheck(card)
+            cls.currentValue = card.value
         cls.currentPlayer += cls.direction
 
 
@@ -213,6 +222,8 @@ p2 = Player()
 p3 = Player()
 p4 = Player()
 
+
+DrawPile.init()
 DrawPile.startdeal()
 bot.initPDists()
 
