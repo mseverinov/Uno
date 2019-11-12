@@ -1,9 +1,13 @@
 import random
 #ACTION ITEMS
-#general code improvements. this has been super quick. probably much better ways to do some things
-#create function that plays a single round. starting at the bot. Keep going until it is the bot's turn again.
-#set up while loop that will run a game to completion
+#general code improvements.
+    #memoization repeatedly used results
+    #see which lists can be replaced with sets
+    #rewrite data storage to modify reference rather than rewrite it for each change/addition
 #end of game detection
+#add case to handle draw pile running out
+#add probability changes after each discard/draw
+#add probability case to handle player drawing a card and whether or not it is put down
 
 
 class Player:
@@ -54,9 +58,9 @@ class Player:
         #May be taken care of by foward searching algorithim.
         counter = {}
         for card in self.hand:
-            if card.color not in counter and color != 'wild':
+            if card.color not in counter and card.color != 'wild':
                 counter[card.color] = 1
-            elif color != 'wild':
+            elif card.color != 'wild':
                 counter[card.color] +=1
 
         mostCommon = None
@@ -70,7 +74,7 @@ class Player:
     def draw(self):
         """Draws a card from the draw pile."""
         #add probability distribution updates here
-        hand.append(DrawPile.draw())
+        self.hand.append(DrawPile.draw())
 
     def chooseCard(self):
         "Chooses a card to play from hand."
@@ -83,12 +87,14 @@ class Player:
         return card
 
 
+
 class Card:
     """Base class for card representations."""
     def __init__(self, color, value):
         """Sets the color and value of the card."""
         self.color = color #red, plue, green, yellow, wild
         self.value = value #0-9, +2, +4, skip, reverse, basic
+        #the normal wild (wild without draw for) has color: wild and value: basic
 
     def __str__(self):
         return str(self.color) + ' ' + str(self.value)
@@ -156,14 +162,15 @@ class Game:
     def init(cls):
         """Once cards have been dealt, run this to turn over the first card."""
         #this is basically complete
+        cls.currentPlayer = random.randint(0, len(Player.all_))
         card = DrawPile.draw()
         while card.color == 'wild' and card.value == '+4': #the game cannot be stared with a wild +4
-            Drawpile.contents.append(card)
+            DrawPile.contents.append(card)
             random.shuffle(DrawPile.contents)
-            card = Drawpile.draw()
+            card = DrawPile.draw()
         DiscardPile.add(card)
         if card.color == 'wild':
-            cls.currentColor = Player.all_[currentPlayer].chooseColor()
+            cls.currentColor = Player.all_[cls.currentPlayer].chooseColor()
         else:
             cls.currentColor = card.color
 
@@ -177,6 +184,7 @@ class Game:
             for i in range(2):
                 Player.all_[cls.currentPlayer].draw()
             cls.currentPlayer += cls.direction
+        cls.currentPlayer = cls.currentPlayer % len(Player.all_)
 
     @classmethod
     def singlePlay(cls):
@@ -194,6 +202,16 @@ class Game:
             action = cls.actionCheck(card)
             cls.currentValue = card.value
         cls.currentPlayer += cls.direction
+        cls.currentPlayer = cls.currentPlayer % len(Player.all_)
+
+    @classmethod
+    def playRound(cls):
+        startPlayer = Player.all_[cls.currentPlayer]
+        cls.singlePlay()
+        currentPlayer = Player.all_[cls.currentPlayer]
+        while startPlayer != currentPlayer:
+            cls.singlePlay()
+            currentPlayer = Player.all_[cls.currentPlayer]
 
     @classmethod
     def actionCheck(cls, card):
@@ -206,9 +224,10 @@ class Game:
             cls.currentPlayer += cls.direction
             return True
         if card.value == '+2' or card.value == '+4':
-            for i in range(int(card.value[-1])):
-                Player.all_[cls.currentPlayer + cls.direction].draw()
             cls.currentPlayer += cls.direction
+            cls.currentPlayer = cls.currentPlayer % len(Player.all_)
+            for i in range(int(card.value[-1])):
+                Player.all_[cls.currentPlayer].draw()
             return True
         return False
 
@@ -222,4 +241,14 @@ p4 = Player()
 
 DrawPile.init()
 DrawPile.startdeal()
+Game.init()
 bot.initPDists()
+while 0 not in [len(player.hand) for player in Player.all_]:
+    output = ''
+    for n, player in enumerate(Player.all_):
+        output += 'P' + str(n+1) + ' ' + str(len(player.hand)) + '\t'
+    print(output)
+    print('player ' + str(Game.currentPlayer))
+    Game.singlePlay()
+    print(Game.currentColor, Game.currentValue)
+    print()
