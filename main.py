@@ -4,6 +4,7 @@ import random
     #memoization repeatedly used results
     #see which lists can be replaced with sets
     #rewrite data storage to modify reference rather than rewrite it for each change/addition
+    #turn player progression into an iterable
 #end of game detection
 #add case to handle draw pile running out
 #add probability changes after each discard/draw
@@ -230,6 +231,31 @@ class Game:
                 Player.all_[cls.currentPlayer].draw()
             return True
         return False
+
+def pColorDist(color):
+    dist = []
+    for n in range(1,7):
+        colorDistRecurs(1, 8-n, n)
+
+
+
+def colorDistRecurs(start, end, n):
+    for i in range(start, end + 1):
+        if end == 7:
+            successNum = 1
+            for m in range(26-n, 26):
+                sucessNum *= m
+            failNum = 1
+            for m in range(1,1):
+                failNum *= m
+            denom = 1
+            for m in range(109-n, 108):
+                denom *= m
+            p = successNum*failNum/denom
+
+        else:
+            colorDistRecurs(start + 1, end + 1, n)
+
 
 
 
