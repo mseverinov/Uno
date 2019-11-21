@@ -308,6 +308,33 @@ def colorDistRecurs(iteration, depth, n):
         pT += pi
     return pT
 
+    def pColorNonRecurs(color):
+        dist = []
+        for n in range(1,8):
+            pn = 0
+            indicies = [i for i in range(1,1+n)]:
+            while condition:
+                sLst = [m for m in range(26-n, 26)]
+                successNum = multIt(sLst)
+
+                fLst = [m for m in range(84-indicies[-1]+n,84)]
+                failNum = multIt(fLst)
+
+                dLst = [m for m in range(109-indicies[-1], 109)]
+                denom = multIt(dLst)
+
+                pn += successNum*failNum/denom
+
+                indicies[-1] += 1
+
+                i = n-1
+                cond2 = True
+                while cond2:
+                    if indicies[i] > 7:
+                        indicies[i] = indicies[i-1] + 2
+                        indicies[i-1] += 1
+                    i -= 1
+
 
 bot = Player()
 p2 = Player()
