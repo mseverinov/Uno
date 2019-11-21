@@ -232,31 +232,6 @@ class Game:
             return True
         return False
 
-def pColorDist(color):
-    dist = []
-    for n in range(1,7):
-        colorDistRecurs(1, 8-n, n)
-
-
-
-def colorDistRecurs(start, end, n):
-    for i in range(start, end + 1):
-        if end == 7:
-            successNum = 1
-            for m in range(26-n, 26):
-                sucessNum *= m
-            failNum = 1
-            for m in range(1,1):
-                failNum *= m
-            denom = 1
-            for m in range(109-n, 108):
-                denom *= m
-            p = successNum*failNum/denom
-
-        else:
-            colorDistRecurs(start + 1, end + 1, n)
-
-
 
 def multIt(it):
     t = 1
@@ -308,6 +283,7 @@ def colorDistRecurs(iteration, depth, n):
         pT += pi
     return pT
 
+
     def pColorNonRecurs(color):
         dist = []
         for n in range(1,8):
@@ -334,6 +310,55 @@ def colorDistRecurs(iteration, depth, n):
                         indicies[i] = indicies[i-1] + 2
                         indicies[i-1] += 1
                     i -= 1
+
+def Heuristic(bot):
+    h = 0
+    #game winning cases
+    if len(hand) == 1:
+        if True in [card.color == 'wild' for card in hand]:
+            return max
+        if hand[0].color == Game.currentColor:
+            return max
+
+    #action cards are valuable
+    for card in hand:
+        if card.value in ['+2', 'reverse', 'skip', 'wild']:
+            h += value * number remaining #having action cards when others don't is increasingly valuabe
+            if len(Player.all_[layer_index + direction].hand) == 1:
+                return high
+
+    #being unable to play a card
+    if True not in [card.color == game.currentColor for card in hand]:
+        lower(heuristic)
+        if True in [card.color == 'wild' for card in hand]:
+            increase(heuristic)
+
+    #rarity of color for others vs for you
+    if True [card.color == game.currentColor for card in hand]:
+        increase(hueristic)
+        modifyby(nColorCardsledt/nColorCardsyouhave)
+
+    #modifywildvalue by relative color rarity
+    if True in [card.color == 'wild' for card in hand]:
+        potentialIncrease = value
+        for portionOfCardsHeld in colors:
+            modify(potentialIncrease)
+        increase(heuristic by potentialIncrease)
+
+    #incorperate knowledge about players hands
+    if known that next player does not have color:
+        if you have a wild:
+            increase(heuistic)
+            modifyby(handsize)
+
+
+            
+    #modify by your hand size relative to others
+    for player in all_:
+        base *= len(player.hand)/len(hand)
+
+    #
+
 
 
 bot = Player()
