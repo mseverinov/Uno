@@ -232,6 +232,31 @@ class Game:
             return True
         return False
 
+def pColorDist(color):
+    dist = []
+    for n in range(1,7):
+        colorDistRecurs(1, 8-n, n)
+
+
+
+def colorDistRecurs(start, end, n):
+    for i in range(start, end + 1):
+        if end == 7:
+            successNum = 1
+            for m in range(26-n, 26):
+                sucessNum *= m
+            failNum = 1
+            for m in range(1,1):
+                failNum *= m
+            denom = 1
+            for m in range(109-n, 108):
+                denom *= m
+            p = successNum*failNum/denom
+
+        else:
+            colorDistRecurs(start + 1, end + 1, n)
+
+
 
 def multIt(it):
     t = 1
