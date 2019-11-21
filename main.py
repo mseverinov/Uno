@@ -4,6 +4,7 @@ import random
     #memoization repeatedly used results
     #see which lists can be replaced with sets
     #rewrite data storage to modify reference rather than rewrite it for each change/addition
+    #turn player progression into an iterable
 #end of game detection
 #add case to handle draw pile running out
 #add probability changes after each discard/draw
@@ -231,6 +232,56 @@ class Game:
             return True
         return False
 
+
+def multIt(it):
+    t = 1
+    for i in it:
+        t *= i
+    return t
+
+
+def pColorDist(color):
+    dist = []
+    for n in range(1,8):
+        if n == 7:
+            print('x')
+        dist.append(colorDistRecurs(0, 1, n))
+    return dist
+
+
+def colorDistRecurs(iteration, depth, n):
+    start = iteration + depth
+    end = 7 - n + depth
+    if n == 6:
+        print(start, end)
+    #n is number of successes
+    pT = 0
+    for iteration, i in enumerate(range(start, end + 1)): #index of success
+        if end == 7:
+            sLst = [m for m in range(26-n, 26)]
+            successNum = multIt(sLst)
+            # for m in range(26-n, 26):
+            #     #as many successes as n
+            #     successNum *= m
+            fLst = [m for m in range(84-i+n,84)]
+            failNum = multIt(fLst)
+            # for m in range(84-i+n,84):
+            #     failNum *= m
+            dLst = [m for m in range(109-i, 109)]
+            denom = multIt(dLst)
+            # for m in range(109-i, 109):
+            #     denom *= m
+            pi = successNum*failNum/denom
+            # print(pi)
+            if n == 6:
+                print(pi, n, i)
+                print(sLst, fLst, dLst)
+                print(start, end)
+                # raise
+        else:
+            pi = colorDistRecurs(iteration, depth + 1, n)
+        pT += pi
+    return pT
 
 
 bot = Player()
