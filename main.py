@@ -217,7 +217,6 @@ class Game:
     @classmethod
     def actionCheck(cls, card):
         """Carries out any effects triggered by an action card."""
-        #complete
         if card.value == 'reverse':
             cls.direction *= -1
             return True
