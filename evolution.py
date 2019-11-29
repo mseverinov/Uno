@@ -5,6 +5,7 @@
 #whether to use fitness value of top actor or to average a portion of the top actors
 #how many actors to use
 #what portion to keep
+<<<<<<< HEAD
 import random
 from collections import deque
 
@@ -16,6 +17,19 @@ nParameters = 100
 
 actors = [[random.random() for i in range(nParameters)] for j in range(nActors)]
 
+=======
+
+
+
+import random
+
+n = 100
+itLowerLimit = 100
+thresholdValue = 1
+thresholdLength = 10
+
+actors = [create(actor) for i in range(n)]
+>>>>>>> 3f0c7071fd86a3d140c5c135d964675e48b71d8b
 fitHist = []
 iteration = 0
 while condition:
@@ -33,5 +47,11 @@ while condition:
 
     if condition:
         random.shuffle(topHalf)
+<<<<<<< HEAD
         children = [ [(topHalf[i][j] + topHalf[i+1][j])/2 for j in range(nParameters)] for i in range(0, nActors//2)]
         actors = topHalf + children + [[random.random() for i in range(nParameters)] for j in range(n/4)]
+=======
+        actorPairs = [(topHalf[i], topHalf[i+1]) for i in range(0,n/2,2)]
+        children = [[(valuePair[0]+valuePair[1])/2 for valuePair in zip(actorPair[0], actorPair[1])] for actorPair in actorPairs]]
+        actors = actorPairs + children + [create(actor) for i in range(n/4)]
+>>>>>>> 3f0c7071fd86a3d140c5c135d964675e48b71d8b
