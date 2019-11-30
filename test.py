@@ -1,3 +1,3 @@
 from collections import deque
 
-print(help(deque))
+help(help(deque))

@@ -1,4 +1,7 @@
 import random
+# from evolution import *
+# from heuristic import fitness
+from collections import deque
 #ACTION ITEMS
 #general code improvements.
     #memoization repeatedly used results
@@ -13,8 +16,10 @@ import random
 
 class Player:
     """Base class for player operations"""
-    deck = [] #holds a references to all possible cards
+    deck = [] #holds references to all possible cards
     all_ = [] #holds references to all players created
+    bot = None
+    parameters = None
 
     def __init__(self):
         """Creates player instance. Adding player to cls.all_"""
@@ -77,7 +82,7 @@ class Player:
         #add probability distribution updates here
         self.hand.append(DrawPile.draw())
 
-    def chooseCard(self):
+    def chooseRand(self):
         "Chooses a card to play from hand."
         #insert foward searching here
         validMoves = self.genValidMoves()
@@ -86,6 +91,9 @@ class Player:
         card = random.choice(validMoves)
         self.hand.remove(card)
         return card
+
+    def chooseWFitness(self):
+        validMoves = self.genValidMoves()
 
 
 
@@ -106,29 +114,17 @@ class Card:
 
 class DrawPile:
     """Base class representing the draw pile."""
-    contents = []
-    @classmethod
-    def init(cls):
-        """Creates all cards, gives a copy to the Player class, and shuffles the deck."""
-        for color in ['red', 'blue', 'yellow', 'green']:
-            for i in range(10):
-                cls.contents.append(Card(color, i))
-            for i in range(1,10):
-                cls.contents.append(Card(color, i))
-            for i in range(2):
-                cls.contents.append(Card(color, 'skip'))
-                cls.contents.append(Card(color, 'reverse'))
-                cls.contents.append(Card(color, '+2'))
-            cls.contents.append(Card('wild', 'basic'))
-            cls.contents.append(Card('wild', '+4'))
-            Player.deck = cls.contents
-            random.shuffle(cls.contents)
+    stack = []
 
     @classmethod
     def draw(cls):
         """Draws a single card."""
-        card = cls.contents[0]
-        cls.contents = cls.contents[1:]
+        if cls.stack == deque():
+            random.shuffle(DiscardPile.stack)
+            cls.stack = deque(DiscardPile.stack)
+            DiscardPile.stack = []
+            # print('Draw pile reupped')
+        card = cls.stack.pop()
         return card
 
     @classmethod
@@ -140,7 +136,7 @@ class DrawPile:
 
 class DiscardPile:
     """Base class representing the discard pile."""
-    stack = [] #cards discared so far
+    stack = None #cards discared so far
 
     @classmethod
     def topcard(cls):
@@ -158,16 +154,42 @@ class Game:
     currentColor = None
     currentValue = None
     direction = 1 #1 for normal, -1 for reversed
+    cards = []
+
+    @classmethod
+    def reset(cls):
+        cls.currentPlayer = 0
+        cls.direction = 1
+        for player in Player.all_:
+            player.hand = []
+        DiscardPile.stack = deque()
+        DrawPile.stack = Game.cards
+        random.shuffle(DrawPile.stack)
+        DrawPile.stack = deque(DrawPile.stack)
+
+    @classmethod
+    def createCards(cls):
+        for color in ['red', 'blue', 'yellow', 'green']:
+            for i in range(10):
+                cls.cards.append(Card(color, i))
+            for i in range(1,10):
+                cls.cards.append(Card(color, i))
+            for i in range(2):
+                cls.cards.append(Card(color, 'skip'))
+                cls.cards.append(Card(color, 'reverse'))
+                cls.cards.append(Card(color, '+2'))
+            cls.cards.append(Card('wild', 'basic'))
+            cls.cards.append(Card('wild', '+4'))
 
     @classmethod
     def init(cls):
         """Once cards have been dealt, run this to turn over the first card."""
         #this is basically complete
-        cls.currentPlayer = random.randint(0, len(Player.all_))
+        cls.currentPlayer = random.randint(0, len(Player.all_) - 1)
         card = DrawPile.draw()
         while card.color == 'wild' and card.value == '+4': #the game cannot be stared with a wild +4
-            DrawPile.contents.append(card)
-            random.shuffle(DrawPile.contents)
+            DrawPile.stack.append(card)
+            random.shuffle(DrawPile.stack)
             card = DrawPile.draw()
         DiscardPile.add(card)
         if card.color == 'wild':
@@ -192,10 +214,13 @@ class Game:
         """Carries out a single play for the next player."""
         #Complete - probability stuff.
         currentPlayer = Player.all_[cls.currentPlayer]
-        card = currentPlayer.chooseCard()
+        if currentPlayer != Player.bot:
+            card = currentPlayer.chooseRand()
+        else:
+            card = currentPlayer.chooseRand()
         if card == False:
             currentPlayer.draw()
-            card = currentPlayer.chooseCard()
+            card = currentPlayer.chooseRand()
         if card != False:
             DiscardPile.add(card)
             if card.color == 'wild':
@@ -231,76 +256,24 @@ class Game:
             return True
         return False
 
+class State:
+    def __init__(self):
+        pass
 
-def Heuristic(bot):
-    h = 0
-    #game winning cases
-    if len(hand) == 1:
-        if True in [card.color == 'wild' for card in hand]:
-            return max
-        if hand[0].color == Game.currentColor:
-            return max
-
-    #action cards are valuable
-    for card in hand:
-        if card.value in ['+2', 'reverse', 'skip', 'wild']:
-            h += value * number remaining #having action cards when others don't is increasingly valuabe
-            if len(Player.all_[layer_index + direction].hand) == 1:
-                return high
-
-    #being unable to play a card
-    if True not in [card.color == game.currentColor for card in hand]:
-        lower(heuristic)
-        if True in [card.color == 'wild' for card in hand]:
-            increase(heuristic)
-
-    #rarity of color for others vs for you
-    if True [card.color == game.currentColor for card in hand]:
-        increase(hueristic)
-        modifyby(nColorCardsledt/nColorCardsyouhave)
-
-    #modifywildvalue by relative color rarity
-    if True in [card.color == 'wild' for card in hand]:
-        potentialIncrease = value
-        for portionOfCardsHeld in colors:
-            modify(potentialIncrease)
-        increase(heuristic by potentialIncrease)
-
-    #incorperate knowledge about players hands
-    if known that next player does not have color:
-        if you have a wild:
-            increase(heuistic)
-            modifyby(handsize)
-
-
-
-    #modify by your hand size relative to others
-    for player in all_:
-        base *= len(player.hand)/len(hand)
-
-def evolution_heuristic():
-    #before every parameter use Pclass.add() to add a new parameter
-
-    #
-
-
-
-bot = Player()
-p2 = Player()
-p3 = Player()
-p4 = Player()
-
-
-DrawPile.init()
-DrawPile.startdeal()
-Game.init()
-bot.initPDists()
-while 0 not in [len(player.hand) for player in Player.all_]:
-    output = ''
-    for n, player in enumerate(Player.all_):
-        output += 'P' + str(n+1) + ' ' + str(len(player.hand)) + '\t'
-    print(output)
-    print('player ' + str(Game.currentPlayer))
-    Game.singlePlay()
-    print(Game.currentColor, Game.currentValue)
-    print()
+def gameLoop():
+    Game.reset()
+    DrawPile.startdeal()
+    Game.init()
+    # bot.initPDists()
+    while 0 not in [len(player.hand) for player in Player.all_]:
+        # output = ''
+        # for n, player in enumerate(Player.all_):
+        #     output += 'P' + str(n+1) + ' ' + str(len(player.hand)) + '\t'
+        # print(output)
+        # print('player ' + str(Game.currentPlayer))
+        Game.singlePlay()
+        # print(Game.currentColor, Game.currentValue)
+        # print()
+        for player in Player.all_:
+            if len(player.hand) == 0:
+                return player == bot
