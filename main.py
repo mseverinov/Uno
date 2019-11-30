@@ -1,5 +1,5 @@
 import random
-# from evolution import *
+# from evolution import fitnessCheck
 # from heuristic import fitness
 from collections import deque
 #ACTION ITEMS
@@ -94,6 +94,11 @@ class Player:
 
     def chooseWFitness(self):
         validMoves = self.genValidMoves()
+        if len(validMoves) == 0:
+            return False
+        card = sorted([(card, fitness(card)) for card in validMoves], key = lambda x: x[1], reverse = True)[0][0]
+        self.hand.remove(card)
+        return card
 
 
 
@@ -119,7 +124,7 @@ class DrawPile:
     @classmethod
     def draw(cls):
         """Draws a single card."""
-        if cls.stack == deque():
+        if len(cls.stack) == 0:
             random.shuffle(DiscardPile.stack)
             cls.stack = deque(DiscardPile.stack)
             DiscardPile.stack = []
@@ -215,7 +220,7 @@ class Game:
         #Complete - probability stuff.
         currentPlayer = Player.all_[cls.currentPlayer]
         if currentPlayer != Player.bot:
-            card = currentPlayer.chooseRand()
+            card = currentPlayer.chooseWFitness()
         else:
             card = currentPlayer.chooseRand()
         if card == False:
@@ -260,11 +265,13 @@ class State:
     def __init__(self):
         pass
 
-def gameLoop():
+def gameLoop(parameters):
+    Player.parameters = parameters
     Game.reset()
     DrawPile.startdeal()
     Game.init()
     # bot.initPDists()
+    # print(len(Player.all_))
     while 0 not in [len(player.hand) for player in Player.all_]:
         # output = ''
         # for n, player in enumerate(Player.all_):
@@ -274,6 +281,89 @@ def gameLoop():
         Game.singlePlay()
         # print(Game.currentColor, Game.currentValue)
         # print()
+
         for player in Player.all_:
             if len(player.hand) == 0:
-                return player == bot
+                return player == Player.bot
+
+
+def fitnessCheck(parameters, nGames):
+    return sum([gameLoop(parameters) for i in range(nGames)])
+
+
+def fitness(card):
+    #potentially incorperate state history
+    h = 0
+    p = Player.parameters
+    if card.value in {0,1,2,3,4,5,6,7,8,9}:
+        h += p[0]
+    elif card.value == 'reverse':
+        h += p[1]
+    elif card.value == 'stop':
+        h += p[2]
+    elif card.value == 'skip':
+        h += p[3]
+    elif card.value == '+2':
+        h += p[4]
+    elif card.value == 'basic':
+        h += p[5]
+    elif card.value == '+4':
+        h += p[6]
+    return h
+
+
+def evo():
+    nActors = 100
+    itLowerLimit = 10
+    thresholdValue = 1
+    thresholdLength = 10
+    nParameters = 7
+    nGames = 100
+
+    bot = Player()
+    Player.bot = bot
+    p2 = Player()
+    p3 = Player()
+    p4 = Player()
+    Game.createCards()
+
+    actors = [[random.random() for i in range(nParameters)] for j in range(nActors)]
+
+    fitHist = []
+    iteration = 0
+    condition = True
+    while condition:
+        print(iteration)
+        iteration += 1
+        fitPairs = sorted([(actor, fitnessCheck(actor, nGames)) for actor in actors], key = lambda x: x[1], reverse = True)  #add record keeping for all wins for all parameter sets across iteration.
+        # print(fitPairs)
+        print([fitPairs[i][1] for i in range(nActors//2)], sum([fitPairs[i][1] for i in range(nActors//2)])/(nGames*nActors/2/4))
+        print([sum([fitPairs[i][0][j] for i in range(nActors//2)])/(nActors//2) for j in range(nParameters)])
+
+        topHalf = [fitPairs[i][0] for i in range(nActors//2)]
+        # t = sum([fitPairs[i][1] for i in range(nActors//2)])
+        # avg = t/(nActors/2)
+        # tup = (fitPairs[0][1], avg)
+        # fitHist.append(tup)
+
+        # if iteration > itLowerLimit:
+        #     improvement = [(fitHist[i] + fitHist[1])/2 for i in range(iteration-1)]
+        #
+        #     #history only needs to be checked for the last thresholdLength values
+        #     #currently checking all values each iteration
+        #     if True in [all([improvement[i, j] < thresholdValue for i in range(thresholdLength)])  for j in range(iteration - thresholdLength - 1)]:
+        #         return fitPairs[0][0]
+
+        random.shuffle(topHalf)
+        children = []
+        for i in range(0, nActors//2, 2):
+            actor = []
+            for j in range(nParameters):
+                actor.append((topHalf[i][j] + topHalf[i+1][j])/2)
+            children.append(actor)
+        # children = [ [(topHalf[i][j] + topHalf[i+1][j])/2 for j in range(nParameters)] for i in range(nActors//2)]
+        actors = topHalf + children + [[random.random() for i in range(nParameters)] for j in range(nActors//4)]
+
+        # print(actors)
+
+print(evo())

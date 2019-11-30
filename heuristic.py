@@ -1,4 +1,4 @@
-def fitness(parameters, state):
+def fitness(parameters, card):
     #potentially incorperate state history
     h = 0
     p = parameters
@@ -23,21 +23,22 @@ def fitness(parameters, state):
     #         mod *= len(Player.all_[layer_index + direction].hand)*p[3]
     #         h += mod
 
-    for card in state.bot.hand:
-        if card.value in {0,1,2,3,4,5,6,7,8,9}:
-            h += p[0]
-        elif card.value == 'reverse':
-            h += p[1]
-        elif card.value == 'stop':
-            h += p[2]
-        elif card.value == 'skip':
-            h += p[3]
-        elif card.value == '+2':
-            h += p[4]
-        elif card.value == 'basic':
-            h += p[5]
-        elif card.value == '+4':
-            h += p[6]
+
+    if card.value in {0,1,2,3,4,5,6,7,8,9}:
+        h += p[0]
+    elif card.value == 'reverse':
+        h += p[1]
+    elif card.value == 'stop':
+        h += p[2]
+    elif card.value == 'skip':
+        h += p[3]
+    elif card.value == '+2':
+        h += p[4]
+    elif card.value == 'basic':
+        h += p[5]
+    elif card.value == '+4':
+        h += p[6]
+    return h
     #
     #
     #

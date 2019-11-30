@@ -12,23 +12,15 @@ from main import *
 from collections import deque
 
 
-def fitnessCheck(actor, nGames):
-    bot = Player()
-    Player.bot = bot
-    p2 = Player()
-    p3 = Player()
-    p4 = Player()
-    Game.createCards()
 
-    return sum([main.gameLoop(actor) for i in range(nGames)])
 
 
 def evo():
-    nActors = 20
+    nActors = 10
     itLowerLimit = 10
     thresholdValue = 1
     thresholdLength = 10
-    nParameters = 100
+    nParameters = 6
     nGames = 100
 
     actors = [[random.random() for i in range(nParameters)] for j in range(nActors)]
@@ -37,6 +29,7 @@ def evo():
     iteration = 0
     condition = True
     while condition:
+        print(iteration)
         iteration += 1
         fitPairs = sorted([(actor, fitnessCheck(actor, nGames)) for actor in actors], key = lambda x: x[1], reverse = True)
 
