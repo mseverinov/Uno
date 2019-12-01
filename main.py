@@ -2,6 +2,7 @@ import random
 # from evolution import fitnessCheck
 # from heuristic import fitness
 from collections import deque
+import cProfile
 #ACTION ITEMS
 #general code improvements.
     #memoization repeatedly used results
@@ -20,6 +21,29 @@ class Player:
     all_ = [] #holds references to all players created
     bot = None
     parameters = None
+
+    def fitness(self, card):
+        #potentially incorperate state history
+        h = 0
+        p = self.parameters
+        nCards = len(self.hand)
+        nCardsNext = len(Player.all_[(Game.currentPlayer + Game.direction) % Game.nPlayers].hand)
+        nCardsPrev = len(Player.all_[(Game.currentPlayer - Game.direction) % Game.nPlayers].hand)
+        if card.value in {0,1,2,3,4,5,6,7,8,9}:
+            h += p[0] + nCards*p[7] + nCardsNext*p[14] + nCardsNext*p[21]
+        elif card.value == 'reverse':
+            h += p[1] + nCards*p[8] + nCardsNext*p[15] + nCardsNext*p[22]
+        elif card.value == 'stop':
+            h += p[2] + nCards*p[9] + nCardsNext*p[16] + nCardsNext*p[23]
+        elif card.value == 'skip':
+            h += p[3] + nCards*p[10] + nCardsNext*p[17] + nCardsNext*p[24]
+        elif card.value == '+2':
+            h += p[4] + nCards*p[11] + nCardsNext*p[18] + nCardsNext*p[25]
+        elif card.value == 'basic':
+            h += p[5] + nCards*p[12] + nCardsNext*p[19] + nCardsNext*p[26]
+        elif card.value == '+4':
+            h += p[6] + nCards*p[13] + nCardsNext*p[20] + nCardsNext*p[27]
+        return h
 
     def __init__(self):
         """Creates player instance. Adding player to cls.all_"""
@@ -42,20 +66,23 @@ class Player:
                 self.playerPDist[other] = self.drawPDist.copy()
 
 
-    def genValidMoves(self):
-        """Returns list of cards that match color or value of drawpile.
-        Wilds are always added.
+    # def genValidMoves(self):
+    #     """Returns list of cards that match color or value of drawpile.
+    #     Wilds are always added.
+    #
+    #     validMoves := list[CardInstance,...]"""
+    #     return [card for card in self.hand if card.color == 'wild' or card.color == Game.currentColor or card.value == Game.currentValue]
 
-        validMoves := list[CardInstance,...]"""
-        validMoves = []
-        for card in self.hand:
-            if card.color == 'wild':
-                validMoves.append(card)
-            elif card.color == Game.currentColor:
-                validMoves.append(card)
-            elif card.value == Game.currentValue:
-                validMoves.append(card)
-        return validMoves
+
+    # def genValidMoves(self, gen = True):
+    #     """Returns list of cards that match color or value of drawpile.
+    #     Wilds are always added.
+    #
+    #     validMoves := list[CardInstance,...]"""
+    #     if gen == True:
+    #         return (card for card in self.hand if card.color == 'wild' or card.color == Game.currentColor or card.value == Game.currentValue)
+    #     else:
+    #         return [card for card in self.hand if card.color == 'wild' or card.color == Game.currentColor or card.value == Game.currentValue]
 
 
     def chooseColor(self):
@@ -82,23 +109,56 @@ class Player:
         #add probability distribution updates here
         self.hand.append(DrawPile.draw())
 
+
     def chooseRand(self):
         "Chooses a card to play from hand."
         #insert foward searching here
-        validMoves = self.genValidMoves()
-        if len(validMoves) == 0:
-            return False
-        card = random.choice(validMoves)
-        self.hand.remove(card)
-        return card
+        for card in self.hand:
+            if card.color == 'wild' or card.color == Game.currentColor or card.value == Game.currentValue:
+                self.hand.remove(card)
+                return card
+        return False
+
+    # def chooseRand(self):
+    #     "Chooses a card to play from hand."
+    #     #insert foward searching here
+    #     validMoves = self.genValidMoves()
+    #     if validMoves == []:
+    #         return False
+    #     card = validMoves[0]
+    #     self.hand.remove(card)
+    #     return card
 
     def chooseWFitness(self):
-        validMoves = self.genValidMoves()
-        if len(validMoves) == 0:
-            return False
-        card = sorted([(card, fitness(card)) for card in validMoves], key = lambda x: x[1], reverse = True)[0][0]
-        self.hand.remove(card)
-        return card
+        tF = 0
+        tC = None
+        for card in self.hand:
+            if card.color == 'wild' or card.color == Game.currentColor or card.value == Game.currentValue:
+                f = self.fitness(card)
+                if f > tF:
+                    tF = f
+                    tC = card
+        if tF != 0:
+            self.hand.remove(tC)
+            return tC
+        return False
+
+    # def chooseWFitness(self):
+    #     validMoves = self.genValidMoves()
+    #     if validMoves == []:
+    #         return False
+    #     tF = 0
+    #     tC = None
+    #     for card in validMoves:
+    #         f = fitness(card)
+    #         if f > tF:
+    #             tF = f
+    #             tC = card
+    #     self.hand.remove(tC)
+    #     return tC
+
+
+
 
 
 
@@ -120,23 +180,26 @@ class Card:
 class DrawPile:
     """Base class representing the draw pile."""
     stack = []
+    cardsLeft = 108
 
     @classmethod
     def draw(cls):
         """Draws a single card."""
-        if len(cls.stack) == 0:
+        if cls.cardsLeft == 0:
             random.shuffle(DiscardPile.stack)
             cls.stack = deque(DiscardPile.stack)
-            DiscardPile.stack = []
+            DiscardPile.stack = deque()
             # print('Draw pile reupped')
-        card = cls.stack.pop()
-        return card
+            cls.cardsLeft = len(cls.stack)
+        cls.cardsLeft -= 1
+        return cls.stack.pop()
 
     @classmethod
     def startdeal(cls):
         """Deals 7 cards to all players."""
         for player in Player.all_:
-            player.hand = [cls.draw() for i in range(7)]
+            player.hand = deque([cls.draw() for i in range(7)])
+            cls.cardsLeft -= 7
 
 
 class DiscardPile:
@@ -160,6 +223,8 @@ class Game:
     currentValue = None
     direction = 1 #1 for normal, -1 for reversed
     cards = []
+    decks = None
+    nPlayers = None
 
     @classmethod
     def reset(cls):
@@ -168,9 +233,9 @@ class Game:
         for player in Player.all_:
             player.hand = []
         DiscardPile.stack = deque()
-        DrawPile.stack = Game.cards
-        random.shuffle(DrawPile.stack)
+        DrawPile.stack = random.choice(Game.decks)
         DrawPile.stack = deque(DrawPile.stack)
+        DrawPile.cardsLeft = 108
 
     @classmethod
     def createCards(cls):
@@ -190,6 +255,7 @@ class Game:
     def init(cls):
         """Once cards have been dealt, run this to turn over the first card."""
         #this is basically complete
+        cls.nPlayers = len(Player.all_)
         cls.currentPlayer = random.randint(0, len(Player.all_) - 1)
         card = DrawPile.draw()
         while card.color == 'wild' and card.value == '+4': #the game cannot be stared with a wild +4
@@ -233,7 +299,7 @@ class Game:
             action = cls.actionCheck(card)
             cls.currentValue = card.value
         cls.currentPlayer += cls.direction
-        cls.currentPlayer = cls.currentPlayer % len(Player.all_)
+        cls.currentPlayer = cls.currentPlayer % cls.nPlayers
 
     @classmethod
     def playRound(cls):
@@ -255,7 +321,7 @@ class Game:
             return True
         if card.value == '+2' or card.value == '+4':
             cls.currentPlayer += cls.direction
-            cls.currentPlayer = cls.currentPlayer % len(Player.all_)
+            cls.currentPlayer = cls.currentPlayer % cls.nPlayers
             for i in range(int(card.value[-1])):
                 Player.all_[cls.currentPlayer].draw()
             return True
@@ -272,7 +338,7 @@ def gameLoop(parameters):
     Game.init()
     # bot.initPDists()
     # print(len(Player.all_))
-    while 0 not in [len(player.hand) for player in Player.all_]:
+    while True:
         # output = ''
         # for n, player in enumerate(Player.all_):
         #     output += 'P' + str(n+1) + ' ' + str(len(player.hand)) + '\t'
@@ -291,34 +357,22 @@ def fitnessCheck(parameters, nGames):
     return sum([gameLoop(parameters) for i in range(nGames)])
 
 
-def fitness(card):
-    #potentially incorperate state history
-    h = 0
-    p = Player.parameters
-    if card.value in {0,1,2,3,4,5,6,7,8,9}:
-        h += p[0]
-    elif card.value == 'reverse':
-        h += p[1]
-    elif card.value == 'stop':
-        h += p[2]
-    elif card.value == 'skip':
-        h += p[3]
-    elif card.value == '+2':
-        h += p[4]
-    elif card.value == 'basic':
-        h += p[5]
-    elif card.value == '+4':
-        h += p[6]
-    return h
+
 
 
 def evo():
-    nActors = 100
+    #better actors make more children?
+    #add mutation rate?
+    #use max of running average rather than cumulative average
+    #keep track of w/l ratio of survivors over the course of generations
+    #lock parameters which have equilibriated
+    #perhaps unlock and relock over time
+    nActors = 640
     itLowerLimit = 10
-    thresholdValue = 1
-    thresholdLength = 10
-    nParameters = 7
-    nGames = 100
+    thresholdValue = .01
+    thresholdLength = 5
+    nParameters = 28
+    nGames = 50
 
     bot = Player()
     Player.bot = bot
@@ -326,44 +380,57 @@ def evo():
     p3 = Player()
     p4 = Player()
     Game.createCards()
+    decks = []
+    for i in range(100):
+        decks.append(Game.cards.copy())
+        random.shuffle(decks[i])
+    Game.decks = decks
 
     actors = [[random.random() for i in range(nParameters)] for j in range(nActors)]
 
     fitHist = []
     iteration = 0
     condition = True
+    fitAvgMax = 0
+    improvIndex = 0
     while condition:
         print(iteration)
         iteration += 1
         fitPairs = sorted([(actor, fitnessCheck(actor, nGames)) for actor in actors], key = lambda x: x[1], reverse = True)  #add record keeping for all wins for all parameter sets across iteration.
         # print(fitPairs)
-        print([fitPairs[i][1] for i in range(nActors//2)], sum([fitPairs[i][1] for i in range(nActors//2)])/(nGames*nActors/2/4))
-        print([sum([fitPairs[i][0][j] for i in range(nActors//2)])/(nActors//2) for j in range(nParameters)])
+        avg = sum([fitPairs[i][1] for i in range(nActors//4)])/(nGames*nActors/4/4) #subtract placebo
+        fitHist.append(avg)
+        print([fitPairs[i][1] for i in range(0, nActors//4, 4)], avg, sum(fitHist)/len(fitHist))
+        # print([sum([fitPairs[i][0][j] for i in range(nActors//2)])/(nActors//2) for j in range(nParameters)])
 
-        topHalf = [fitPairs[i][0] for i in range(nActors//2)]
+        topHalf = [fitPairs[i][0] for i in range(nActors//4)]
         # t = sum([fitPairs[i][1] for i in range(nActors//2)])
         # avg = t/(nActors/2)
         # tup = (fitPairs[0][1], avg)
         # fitHist.append(tup)
 
-        # if iteration > itLowerLimit:
-        #     improvement = [(fitHist[i] + fitHist[1])/2 for i in range(iteration-1)]
-        #
-        #     #history only needs to be checked for the last thresholdLength values
-        #     #currently checking all values each iteration
-        #     if True in [all([improvement[i, j] < thresholdValue for i in range(thresholdLength)])  for j in range(iteration - thresholdLength - 1)]:
-        #         return fitPairs[0][0]
+        if iteration > itLowerLimit:
+            if avg > fitAvgMax + thresholdValue:
+                fitAvgMax = avg
+                improvIndex = iteration
+
+            if iteration - improvIndex > thresholdLength:
+                return topHalf[0]
+
+
 
         random.shuffle(topHalf)
         children = []
-        for i in range(0, nActors//2, 2):
+        for i in range(0, nActors//4, 2):
             actor = []
             for j in range(nParameters):
                 actor.append((topHalf[i][j] + topHalf[i+1][j])/2)
             children.append(actor)
         # children = [ [(topHalf[i][j] + topHalf[i+1][j])/2 for j in range(nParameters)] for i in range(nActors//2)]
-        actors = topHalf + children + [[random.random() for i in range(nParameters)] for j in range(nActors//4)]
+        actors = topHalf + children + [[random.random() for i in range(nParameters)] for j in range(5*nActors//8)]
+
 
         # print(actors)
 
-print(evo())
+# cProfile.run('evo()',sort='tottime')
+evo()

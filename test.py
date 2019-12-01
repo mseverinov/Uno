@@ -1,5 +1,9 @@
 import random
-a = [(i, random.randint(1,100)) for i in range(100)]
-print(sorted(a,key = lambda x: x[1], reverse = True))
+a = [i for i in range(10)]
+b = []
+for i in range(10):
+    b.append(a.copy())
+    print(b)
+    random.shuffle(b[-1])
 
-sorted
+print(b)
