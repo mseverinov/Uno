@@ -1,14 +1,5 @@
-#TO DO
-#determine heuristics for end of evolution
-#threhold testing length
-#min amount of improvement
-#whether to use fitness value of top actor or to average a portion of the top actors
-#how many actors to use
-#what portion to keep
-#potential advesarial evolution?
-    #have actors play against each other rather than against the same opponent
 import random
-from main import *
+import time
 from collections import deque
 
 class Evo:
@@ -47,13 +38,27 @@ class Evo:
 
 
     #Monday
-        #label and group results in viewing
+        #simultaniuis side evolution to improve accuracy of improvement
+        #evo -> stand alone
+
 
     #Tuesday
-        #simultanios side evolution
+        #label and group results in viewing
+        #incorperate w/l multigenerational record
+
 
     #Wednesday
-        #incorperate w/l multigenerational record
+        #implement randomization of node function,
+            #remove unnessary parameters
+            #determine how this will be incorperated into evolution
+            #functions:
+                # x
+                # 1/x
+                # + vs - ?
+                # x^2
+                #combinations of the above
+
+
 
     #Thursday
         #probabilistic fitness matching for cross breeding
@@ -68,19 +73,19 @@ class Evo:
         self.avgActorHist = []
 
 
-    def mainLoop(self):
+    def mainLoop(self, fitnessCheck):
         start = 0
         end = 0
         iteration = 0
         continueCond = True
-        self.actors = createRandActors(self, nActors)
+        self.actors = self.createRandActors(self.nActors)
         while continueCond:
-            start = time.time()
             print('it:', iteration, 'time:', int(end-start))
+            start = time.time()
             iteration += 1
 
             fitPairs = sorted([(actor, fitnessCheck(actor, self.nGames)) for actor in self.actors], key = lambda x: x[1], reverse = True)
-            avg, quartAvg, halfAvg, cumAvg = calcStats(self, fitPairs)
+            avg, quartAvg, halfAvg, cumAvg = self.calcStats(fitPairs)
             # actorHistoryN = {}
             # for pair in fitPairs[:nActors//nKeep]:
             #     tActor = tuple(pair[0])
@@ -98,11 +103,12 @@ class Evo:
             # avgActorHist.append(avgActor)
             # print([top[0]])
             # print([sum([avgActorHist[i][j] for i in range(len(avgActorHist))])//len(avgActorHist) for j in range(nParameters)])
+            top = [fitPairs[i][0] for i in range(self.nActors//2)]
             if self.endCheck(iteration):
                 return top[0]
 
             nNewActors = 3*self.nActors//8
-            actors = top + createChildren(parents) + createRandActors(nNewActors)
+            actors = top + self.createChildren(top) + self.createRandActors(nNewActors)
             end = time.time()
 
 
@@ -114,9 +120,9 @@ class Evo:
     def createChildren(self, parents):
         # random.shuffle(parents)
         children = []
-        for i in range(0, nActors//(nKeep*2), 2):
+        for i in range(0, self.nActors//(self.nKeep*2), 2):
             actor = []
-            for j in range(nParameters):
+            for j in range(self.nParameters):
                 actor.append((parents[i][j] + parents[i+1][j])/2)
             children.append(actor)
         # print(children)
@@ -139,7 +145,7 @@ class Evo:
         return avg, quartAvg, halfAvg, cumAvg
 
     def endCheck(self,iteration):
-        if iteration > itLowerLimit:
+        if iteration > self.itLowerLimit:
             return True
         else:
             return False

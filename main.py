@@ -4,6 +4,7 @@ import time
 # from heuristic import fitness
 from collections import deque
 import cProfile
+from evolution import *
 #ACTION ITEMS
 #general code improvements.
     #memoization repeatedly used results
@@ -404,146 +405,6 @@ def fitnessCheck(parameters, nGames):
     return sum([gameLoop(parameters) for i in range(nGames)])
 
 
-
-
-
-def evo():
-    #better actors make more children?
-    #add mutation rate?
-    #lock parameters which have equilibriated
-    #perhaps unlock and relock over time
-    #clustering algorithim
-    #rather than having a coefficient for all possible functional forms, randomize the choice of functional
-        #only cross breed species with matching functional forms
-        #mutuate children from loners
-    #give opposing players parameters from other actors
-    #multi threading
-    #analyze differences in parameters of time for differerent portions of the top
-    #write results to a file
-    #increase number of games to test over as iteration number increases
-    #discard any actors that perform below average, especially in the beginining
-        #each generation keep above average until carry over cap reached
-    #do parents need to be retested generation after generation?
-    #in cross breeding explore other avenues besides averaging all values
-        #some averages
-        #some crossovers
-        #some mutations
-            #any ways to think about what an optimal coefficent of the above would be?
-    #random include or drop various nodes to determine which are necesarry?
-    #implement graphing of results
-    #visualize what the w/l ratio of a single parameter set is across generations. is it consistent? how much so?
-
-
-    #Monday
-        #label and group results in viewing
-
-    #Tuesday
-        #simultanios side evolution
-
-    #Wednesday
-        #incorperate w/l multigenerational record
-
-    #Thursday
-        #probabilistic fitness matching for cross breeding
-
-    nActors = 160
-    itLowerLimit = 100
-    thresholdValue = 1
-    thresholdLength = 100
-    nParameters = 49
-    nGames = 500
-
-    bot = Player()
-    Player.bot = bot
-    p2 = Player()
-    p3 = Player()
-    p4 = Player()
-    Game.createCards()
-    decks = []
-    for i in range(157):
-        decks.append(Game.cards.copy())
-        random.shuffle(decks[i])
-    Game.decks = decks
-
-    # actors = [[random.random() for i in range(nParameters)] for j in range(nActors)]
-    actors = [[random.randint(-100,100) for i in range(nParameters)] for j in range(nActors)]
-    # actors = [[1 for i in range(nParameters)] for j in range(nActors)]
-    # actorHistory = {tuple(actor):(0,0) for actor in actors}
-
-    fitHist = []
-    iteration = 0
-    condition = True
-    # runningAvg = 0
-    # fitAvgMax = 0
-    # improvIndex = 0
-    avgActorHist = []
-    nKeep = 2
-    start = 0
-    end = 0
-    while condition:
-        print('it:', iteration, 'time:', int(end-start))
-        iteration += 1
-        start = time.time()
-        fitPairs = sorted([(actor, fitnessCheck(actor, nGames)) for actor in actors], key = lambda x: x[1], reverse = True)
-        end = time.time()
-
-        # actorHistoryN = {}
-        # for pair in fitPairs[:nActors//nKeep]:
-        #     tActor = tuple(pair[0])
-        #     if tActor in actorHistory:
-        #         actorHistoryN[tActor] = (pair[1] + actorHistory[tActor][0], nGames + actorHistory[tActor][1])
-        #     else:
-        #         actorHistoryN[tActor] = (pair[1], nGames)
-        # actorHistory = actorHistoryN
-
-        top = [fitPairs[i][0] for i in range(nActors//nKeep)]
-        avg = sum([fitPairs[i][1] for i in range(nActors//nKeep//2)])/(nGames*nActors/nKeep/2/4)
-        fitHist.append(avg)
-
-        cumAvg = sum(fitHist)/len(fitHist)
-        half = fitHist[len(fitHist)//2:]
-        halfAvg = sum(half)/(len(half))
-        quart = fitHist[len(fitHist)//4:]
-        quartAvg = sum(quart)/(len(quart))
-
-        if nActors//4 > 20:
-            step = (nActors//4)//20
-        else:
-            step = 1
-        print([fitPairs[i][1] for i in range(0, nActors//4, step)], avg, str(quartAvg), str(halfAvg), str(cumAvg))
-        # avgActor = [sum([fitPairs[i][0][j] for i in range(nActors//nKeep//2)])/(nActors/nKeep/2) for j in range(nParameters)]
-        # avgActorHist.append(avgActor)
-        # print([top[0]])
-        # print([sum([avgActorHist[i][j] for i in range(len(avgActorHist))])//len(avgActorHist) for j in range(nParameters)])
-
-
-        if iteration > itLowerLimit:
-            return top[0]
-
-            # if runningAvg > fitAvgMax + thresholdValue:
-            #     fitAvgMax = runningAvg
-            #     improvIndex = iteration
-            #
-            # if iteration - improvIndex > thresholdLength:
-            #     return top[0]
-
-
-
-        # random.shuffle(top)
-        children = []
-        for i in range(0, nActors//(nKeep*2), 2):
-            actor = []
-            for j in range(nParameters):
-                actor.append((top[i][j] + top[i+1][j])/2)
-            children.append(actor)
-        # print(children)
-        # children = [ [(topHalf[i][j] + topHalf[i+1][j])/2 for j in range(nParameters)] for i in range(nActors//2)]
-        # actors = top + children + [[random.random() for i in range(nParameters)] for j in range(5*nActors//8)]
-        actors = top + children + [[random.randint(-100,100) for i in range(nParameters)] for j in range(3*nActors//8)]
-
-
-        # print(actors)
-
 # cProfile.run('evo()',sort='tottime')
 bot = Player()
 Player.bot = bot
@@ -556,3 +417,9 @@ for i in range(157):
     decks.append(Game.cards.copy())
     random.shuffle(decks[i])
 Game.decks = decks
+
+first = Evo()
+first.mainLoop(fitnessCheck)
+# first.mainLoop()
+#
+# print(evo.Evo())
