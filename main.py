@@ -1,4 +1,5 @@
 import random
+import time
 # from evolution import fitnessCheck
 # from heuristic import fitness
 from collections import deque
@@ -248,6 +249,15 @@ class Game:
     nPlayers = None
 
     @classmethod
+    def deckGen(cls):
+        i = 0
+        while True:
+            yield cls.decks[i]
+            i += 1
+            if i == 157:
+                i = 0
+
+    @classmethod
     def reset(cls):
         cls.currentPlayer = 0
         cls.direction = 1
@@ -370,15 +380,15 @@ def gameLoop(parameters):
     while True:
         if ErrorChecking.handLengths:
             ErrorChecking.handLenRecord()
-        try:
-            Game.singlePlay()
-        except:
-            print(ErrorChecking.output)
-            print(Game.currentPlayer, Game.currentColor, Game.currentValue)
-            for player in Player.all_:
-                print(player.hand)
 
-            raise
+        Game.singlePlay()
+        # except:
+        #     print(ErrorChecking.output)
+        #     print(Game.currentPlayer, Game.currentColor, Game.currentValue)
+        #     for player in Player.all_:
+        #         print(player.hand)
+        #
+        #     raise
         # print(Game.currentColor, Game.currentValue)
         # print()
 
@@ -410,6 +420,18 @@ def evo():
     #multi threading
     #analyze differences in parameters of time for differerent portions of the top
     #write results to a file
+    #increase number of games to test over as iteration number increases
+    #discard any actors that perform below average, especially in the beginining
+        #each generation keep above average until carry over cap reached
+    #do parents need to be retested generation after generation?
+    #in cross breeding explore other avenues besides averaging all values
+        #some averages
+        #some crossovers
+        #some mutations
+            #any ways to think about what an optimal coefficent of the above would be?
+    #random include or drop various nodes to determine which are necesarry?
+    #implement graphing of results
+    #visualize what the w/l ratio of a single parameter set is across generations. is it consistent? how much so?
 
 
     #Monday
@@ -424,8 +446,8 @@ def evo():
     #Thursday
         #probabilistic fitness matching for cross breeding
 
-    nActors = 80
-    itLowerLimit = 10
+    nActors = 160
+    itLowerLimit = 100
     thresholdValue = 1
     thresholdLength = 100
     nParameters = 49
@@ -438,7 +460,7 @@ def evo():
     p4 = Player()
     Game.createCards()
     decks = []
-    for i in range(100):
+    for i in range(157):
         decks.append(Game.cards.copy())
         random.shuffle(decks[i])
     Game.decks = decks
@@ -451,14 +473,19 @@ def evo():
     fitHist = []
     iteration = 0
     condition = True
+    # runningAvg = 0
     # fitAvgMax = 0
     # improvIndex = 0
     avgActorHist = []
-    nKeep = 4
+    nKeep = 2
+    start = 0
+    end = 0
     while condition:
-        print(iteration)
+        print('it:', iteration, 'time:', int(end-start))
         iteration += 1
+        start = time.time()
         fitPairs = sorted([(actor, fitnessCheck(actor, nGames)) for actor in actors], key = lambda x: x[1], reverse = True)
+        end = time.time()
 
         # actorHistoryN = {}
         # for pair in fitPairs[:nActors//nKeep]:
@@ -470,14 +497,24 @@ def evo():
         # actorHistory = actorHistoryN
 
         top = [fitPairs[i][0] for i in range(nActors//nKeep)]
-        avg = sum([fitPairs[i][1] for i in range(nActors//nKeep)])/(nGames*nActors/nKeep/4)
+        avg = sum([fitPairs[i][1] for i in range(nActors//nKeep//2)])/(nGames*nActors/nKeep/2/4)
         fitHist.append(avg)
-        runningAvg = sum(fitHist[-5:])/5
-        print([fitPairs[i][1] for i in range(0, nActors//4, (nActors//4)//20)], avg, runningAvg, sum(fitHist)/len(fitHist))
-        avgActor = [sum([fitPairs[i][0][j] for i in range(nActors//nKeep)])//(nActors//nKeep) for j in range(nParameters)]
-        avgActorHist.append(avgActor)
-        print([top[0]])
-        print([sum([avgActorHist[i][j] for i in range(len(avgActorHist))])//len(avgActorHist) for j in range(nParameters)])
+
+        cumAvg = sum(fitHist)/len(fitHist)
+        half = fitHist[len(fitHist)//2:]
+        halfAvg = sum(half)/(len(half))
+        quart = fitHist[len(fitHist)//4:]
+        quartAvg = sum(quart)/(len(quart))
+
+        if nActors//4 > 20:
+            step = (nActors//4)//20
+        else:
+            step = 1
+        print([fitPairs[i][1] for i in range(0, nActors//4, step)], avg, str(quartAvg), str(halfAvg), str(cumAvg))
+        # avgActor = [sum([fitPairs[i][0][j] for i in range(nActors//nKeep//2)])/(nActors/nKeep/2) for j in range(nParameters)]
+        # avgActorHist.append(avgActor)
+        # print([top[0]])
+        # print([sum([avgActorHist[i][j] for i in range(len(avgActorHist))])//len(avgActorHist) for j in range(nParameters)])
 
 
         if iteration > itLowerLimit:
@@ -492,20 +529,30 @@ def evo():
 
 
 
-        random.shuffle(top)
+        # random.shuffle(top)
         children = []
-        for i in range(0, nActors//4, 2):
+        for i in range(0, nActors//(nKeep*2), 2):
             actor = []
             for j in range(nParameters):
-                actor.append((top[i][j] + top[i+1][j])//2)
+                actor.append((top[i][j] + top[i+1][j])/2)
             children.append(actor)
         # print(children)
         # children = [ [(topHalf[i][j] + topHalf[i+1][j])/2 for j in range(nParameters)] for i in range(nActors//2)]
         # actors = top + children + [[random.random() for i in range(nParameters)] for j in range(5*nActors//8)]
-        actors = top + children + [[random.randint(-100,100) for i in range(nParameters)] for j in range(5*nActors//8)]
+        actors = top + children + [[random.randint(-100,100) for i in range(nParameters)] for j in range(3*nActors//8)]
 
 
         # print(actors)
 
 # cProfile.run('evo()',sort='tottime')
-evo()
+bot = Player()
+Player.bot = bot
+p2 = Player()
+p3 = Player()
+p4 = Player()
+Game.createCards()
+decks = []
+for i in range(157):
+    decks.append(Game.cards.copy())
+    random.shuffle(decks[i])
+Game.decks = decks
