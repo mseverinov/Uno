@@ -3,51 +3,60 @@ import time
 from collections import deque
 
 class Evo:
-    nActors = 160
-    itLowerLimit = 100
+    nActors = 24
+    itLowerLimit = 15
     thresholdValue = 1
-    thresholdLength = 100
+    thresholdLength = 15
     nParameters = 49
-    nGames = 500
+    nGames = 100
     parmRange = 100
     nKeep = 2
-    #better actors make more children?
-    #add mutation rate?
-    #lock parameters which have equilibriated
-    #perhaps unlock and relock over time
-    #clustering algorithim
-    #rather than having a coefficient for all possible functional forms, randomize the choice of functional
-        #only cross breed species with matching functional forms
-        #mutuate children from loners
-    #give opposing players parameters from other actors
-    #multi threading
-    #analyze differences in parameters of time for differerent portions of the top
-    #write results to a file
-    #increase number of games to test over as iteration number increases
-    #discard any actors that perform below average, especially in the beginining
-        #each generation keep above average until carry over cap reached
-    #do parents need to be retested generation after generation?
-    #in cross breeding explore other avenues besides averaging all values
-        #some averages
-        #some crossovers
-        #some mutations
-            #any ways to think about what an optimal coefficent of the above would be?
-    #random include or drop various nodes to determine which are necesarry?
-    #implement graphing of results
-    #visualize what the w/l ratio of a single parameter set is across generations. is it consistent? how much so?
-
-
-    #Monday
+    #THOUGHTS IDEAS ECT
+        #better actors make more children?
+        #add mutation rate?
+        #lock parameters which have equilibriated
+        #perhaps unlock and relock over time
+        #clustering algorithim
+        #rather than having a coefficient for all possible functional forms, randomize the choice of functional
+            #only cross breed species with matching functional forms
+            #mutuate children from loners
+        #give opposing players parameters from other actors
+        #multi threading
+        #analyze differences in parameters of time for differerent portions of the top
+        #write results to a file
+        #increase number of games to test over as iteration number increases
+        #discard any actors that perform below average, especially in the beginining
+            #each generation keep above average until carry over cap reached
+        #do parents need to be retested generation after generation?
+        #in cross breeding explore other avenues besides averaging all values
+            #some averages
+            #some crossovers
+            #some mutations
+                #any ways to think about what an optimal coefficent of the above would be?
+        #random include or drop various nodes to determine which are necesarry?
+        #implement graphing of results
+        #visualize what the w/l ratio of a single parameter set is across generations. is it consistent? how much so?
         #simultaniuis side evolution to improve accuracy of improvement
         #evo -> stand alone
-
-
-    #Tuesday
         #label and group results in viewing
         #incorperate w/l multigenerational record
+        #attempt 10 games, 8000 actors
+        #probabilistic fitness matching for cross breeding
 
+    #Priority 1
+        #SPEED UP UNO GAME SIMULATION!!
+            #create list/set of valid moves for every card at the beginning of simulation
+            #Potential Solution 1: Vectorize
+                #use numpy to multiply binary vectors to find crossover
+                #this will require significantly longer lists. Will the speed up overcome this?
+            #Potential Solution 2
+                #Use set comparision to do the same thing
+                #which cards in hand are in set that contains all valid move for the card on top of the discard pile
 
-    #Wednesday
+    #Priority 2
+        #rewrite current evolution algorithim using DEAP library
+
+    #Priority 3
         #implement randomization of node function,
             #remove unnessary parameters
             #determine how this will be incorperated into evolution
@@ -59,9 +68,6 @@ class Evo:
                 #combinations of the above
 
 
-
-    #Thursday
-        #probabilistic fitness matching for cross breeding
 
     def __init__(self):
 
