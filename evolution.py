@@ -4,11 +4,11 @@ from collections import deque
 
 class Evo:
     nActors = 24
-    itLowerLimit = 15
+    itLowerLimit = 10
     thresholdValue = 1
     thresholdLength = 15
     nParameters = 49
-    nGames = 100
+    nGames = 10
     parmRange = 100
     nKeep = 2
     #THOUGHTS IDEAS ECT
@@ -104,7 +104,7 @@ class Evo:
                 step = (self.nActors//4)//20
             else:
                 step = 1
-            print([fitPairs[i][1] for i in range(0, self.nActors//4, step)], avg, str(quartAvg), str(halfAvg), str(cumAvg))
+            # print([fitPairs[i][1] for i in range(0, self.nActors//4, step)], avg, str(quartAvg), str(halfAvg), str(cumAvg))
             # avgActor = [sum([fitPairs[i][0][j] for i in range(nActors//nKeep//2)])/(nActors/nKeep/2) for j in range(nParameters)]
             # avgActorHist.append(avgActor)
             # print([top[0]])
