@@ -1,0 +1,26 @@
+42.577 seconds og before sets
+58.051 seconds sets added
+50.219 seconds hand turned into a set
+45.135 seconds removed some extra bits from actionCheck + exported len calls from fitness into parent function +
+         74711017 function calls in
+
+         if non else works. significantly more care can be put into determining whether or not more games are needed to zero in on the fitness of a profile
+
+         also, if I vectorize. hash checks and equivalence checks will not be needed
+            Ordered by: internal time
+           Note: including dups in sets doubles their size
+OMFG data can share HASH VALUES, a set probably can't contain multiple elements with the same hash though
+                                        this is fine for valid move sets!, hands would just need to be transitioned back to ques
+                                              transitioning hands to sets did result in a significant speed up though. oohf
+
+would transitioning color/value attributes into numbers speed up processsing?
+    a map can always be used to regenerate the names for display
+
+could color and value attributes be removed? Could cards be identified exclusively by their hash?
+
+
+ #modify game class to hold top card from draw pile with maybe a modifier to specifiy the color or maybe have one card stay in place and just modify its values over time
+#staged fitness calls. rough then more precise
+
+
+I could memorze validMoves for every possible card combination before hand and just pull them up as necesarry
