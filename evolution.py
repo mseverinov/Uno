@@ -1,10 +1,11 @@
 import random
 import time
 from collections import deque
+import multiprocessing
 
 class Evo:
-    nActors = 24
-    itLowerLimit = 15
+    nActors = 8
+    itLowerLimit = 5
     thresholdValue = 1
     thresholdLength = 15
     nParameters = 49
