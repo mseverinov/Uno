@@ -1,10 +1,14 @@
 import random
 import time
 from collections import deque
+import multiprocessing
+from deap import base
+from deap import creator
+from deap import tools
 
 class Evo:
-    nActors = 24
-    itLowerLimit = 15
+    nActors = 8
+    itLowerLimit = 5
     thresholdValue = 1
     thresholdLength = 15
     nParameters = 49
@@ -78,20 +82,75 @@ class Evo:
         # improvIndex = 0
         self.avgActorHist = []
 
+    def deapSetup(self, fitnessCheck):
+        # deap class creation
+        creator.create("FitnessMax", base.Fitness, weights=(1.0,))
+        creator.create("Individual", list, fitness=creator.FitnessMax)
+
+        self.toolbox = base.Toolbox() #toolbox container contains the individual, the population, as well as : functions, operators, and arguements
+        self.toolbox.register("evaluate", fitnessCheck)
+        self.toolbox.register("mate", tools.cxTwoPoint)
+        self.toolbox.register("mutate", tools.mutFlipBit, indpb=0.05)
+        self.toolbox.register("select", tools.selTournament, tournsize=3)
+
+        # creating our population container
+        self.toolbox.register("attr_bool", random.random)
+        self.toolbox.register("individual", tools.initRepeat, creator.Individual, toolbox.attr_bool, self.nParameters) #initReapeat calsl the function container with a generator function corresponding to the calling n times the function .
+        self.toolbox.register("population", tools.initRepeat, list, toolbox.individual) #create a population contains unfixed amount of individuals
 
     def mainLoop(self, fitnessCheck):
         start = 0
         end = 0
         iteration = 0
         continueCond = True
-        self.actors = self.createRandActors(self.nActors)
+        # self.actors = self.createRandActors(self.nActors)
+
+        population = self.toolbox.population(n=self.nActors)
+        fitnesses = list(map(self.toolbox.evaluate, population))  # Evaluates the entire population
+        for ind, fit in zip(population, fitnesses):
+            fit = [fit]
+            ind.fitness.values = fit
+        # CXPB  is the probability with which two individuals are crossed
+        # MUTPB is the probability for mutating an individual
+        CXPB, MUTPB = 0.5, 0.2
+        fits = [ind.fitness.values[0] for ind in population]
+
         while continueCond:
             print('it:', iteration, 'time:', int(end-start))
             start = time.time()
             iteration += 1
 
-            fitPairs = sorted([(actor, fitnessCheck(actor, self.nGames)) for actor in self.actors], key = lambda x: x[1], reverse = True)
-            avg, quartAvg, halfAvg, cumAvg = self.calcStats(fitPairs)
+            offspring = self.toolbox.select(population, len(population))  # selects all individuals in the population
+            offspring = list(map(self.toolbox.clone, offspring))  # Clone creates a copy of each individual so our new list does not reference the prior generation of individuals
+
+            for child1, child2 in zip(offspring[::2], offspring[1::2]):
+                if random.random() < CXPB:
+                    self.toolbox.mate(child1, child2)  # are child1 & child2 modified? are they the parents? do they become the children? are the both?
+                    del child1.fitness.values  # why delete these
+                    del child2.fitness.values
+
+            for mutant in offspring:
+                if random.random() < MUTPB:
+                    self.toolbox.mutate(mutant)  # modifes the individual in place
+                    del mutant.fitness.values
+
+            population[:] = offspring  # replace old population with new population
+
+            # Gather all the fitnesses in one list and print the stats
+            fits = [ind.fitness.values[0] for ind in population]
+
+            length = len(population)
+            mean = sum(fits) / length
+            sum2 = sum(x*x for x in fits)
+            std = abs(sum2 / length - mean**2)**0.5
+
+            print("  Min %s" % min(fits))
+            print("  Max %s" % max(fits))
+            print("  Avg %s" % mean)
+            print("  Std %s" % std)
+
+            # fitPairs = sorted([(actor, fitnessCheck(actor, self.nGames)) for actor in self.actors], key = lambda x: x[1], reverse = True)
+            # avg, quartAvg, halfAvg, cumAvg = self.calcStats(fitPairs)
             # actorHistoryN = {}
             # for pair in fitPairs[:nActors//nKeep]:
             #     tActor = tuple(pair[0])
@@ -100,22 +159,22 @@ class Evo:
             #     else:
             #         actorHistoryN[tActor] = (pair[1], nGames)
             # actorHistory = actorHistoryN
-            if self.nActors//4 > 20:
-                step = (self.nActors//4)//20
-            else:
-                step = 1
-            print([fitPairs[i][1] for i in range(0, self.nActors//4, step)], avg, str(quartAvg), str(halfAvg), str(cumAvg))
-            # avgActor = [sum([fitPairs[i][0][j] for i in range(nActors//nKeep//2)])/(nActors/nKeep/2) for j in range(nParameters)]
-            # avgActorHist.append(avgActor)
-            # print([top[0]])
-            # print([sum([avgActorHist[i][j] for i in range(len(avgActorHist))])//len(avgActorHist) for j in range(nParameters)])
-            top = [fitPairs[i][0] for i in range(self.nActors//2)]
-            if self.endCheck(iteration):
-                return top[0]
-
-            nNewActors = 3*self.nActors//8
-            actors = top + self.createChildren(top) + self.createRandActors(nNewActors)
-            end = time.time()
+            # if self.nActors//4 > 20:
+            #     step = (self.nActors//4)//20
+            # else:
+            #     step = 1
+            # print([fitPairs[i][1] for i in range(0, self.nActors//4, step)], avg, str(quartAvg), str(halfAvg), str(cumAvg))
+            # # avgActor = [sum([fitPairs[i][0][j] for i in range(nActors//nKeep//2)])/(nActors/nKeep/2) for j in range(nParameters)]
+            # # avgActorHist.append(avgActor)
+            # # print([top[0]])
+            # # print([sum([avgActorHist[i][j] for i in range(len(avgActorHist))])//len(avgActorHist) for j in range(nParameters)])
+            # top = [fitPairs[i][0] for i in range(self.nActors//2)]
+            # if self.endCheck(iteration):
+            #     return top[0]
+            #
+            # nNewActors = 3*self.nActors//8
+            # actors = top + self.createChildren(top) + self.createRandActors(nNewActors)
+            # end = time.time()
 
 
     def createRandActors(self, n):

@@ -18,9 +18,7 @@ def main():
         # print(ind.fitness.values, fit)
         ind.fitness.values = fit #used the fitness attribute we created earlier, assignes the generated fit value to it
         # print(ind.fitness.values, fit)
-    # CXPB  is the probability with which two individuals
-    #       are crossed
-    #
+    # CXPB  is the probability with which two individuals are crossed
     # MUTPB is the probability for mutating an individual
     CXPB, MUTPB = 0.5, 0.2
 
