@@ -1,7 +1,7 @@
 import multiprocessing
 import time
 import random
-import multi
+import worker
 from collections import deque
 import main
 import cProfile
@@ -9,13 +9,11 @@ import math
 #ACTION ITEMS
 #general code improvements.
     #memoization repeatedly used results
-    #see which lists can be replaced with sets
-    #rewrite data storage to modify reference rather than rewrite it for each change/addition
-    #turn player progression into an iterable
-#end of game detection
-#add case to handle draw pile running out
 #add probability changes after each discard/draw
 #add probability case to handle player drawing a card and whether or not it is put down
+
+
+#REWRITE MAIN CODE TO UTILIZE INSTANCES OF CLASSES RATHER THAN CLASS OBJECTS
 
 class ErrorChecking:
     handLengths = False
@@ -37,12 +35,6 @@ class ErrorChecking:
 
 class Player:
     """Base class for player operations"""
-    # deck = [] #holds references to all possible cards
-    all_ = [] #holds references to all players created #rename to created?
-    bot = None
-    parameters = None
-    validMoves = {}
-    emptySet = set()
 
     def fitness(self, card, myHandSize, nextHandSize, prevHandSize):
         #potentially incorperate state history
@@ -64,9 +56,14 @@ class Player:
             h += p[6] + myHandSize*p[13] + nextHandSize*p[20] + prevHandSize*p[27] + 1/myHandSize*p[34] + 1/nextHandSize*p[41] + 1/prevHandSize*p[48]
         return h
 
-    def __init__(self):
+    def __init__(self, container = False):
         """Creates player instance. Adding player to cls.all_"""
-        self.all_.append(self)
+        if container:
+            self.all_ = []
+            self.bot = None
+            self.parameters = None
+            self.emptySet = set()
+
 
     def initPDists(self):
         """Initializes probability distributions for drawpile and other players' hands.
@@ -85,29 +82,8 @@ class Player:
                 self.playerPDist[other] = self.drawPDist.copy()
 
 
-    # def genValidMoves(self):
-    #     """Returns list of cards that match color or value of drawpile.
-    #     Wilds are always added.
-    #
-    #     validMoves := list[CardInstance,...]"""
-    #     return [card for card in self.hand if card.color == 'wild' or card.color == Game.currentColor or card.value == Game.currentValue]
-
-
-    # def genValidMoves(self, gen = True):
-    #     """Returns list of cards that match color or value of drawpile.
-    #     Wilds are always added.
-    #
-    #     validMoves := list[CardInstance,...]"""
-    #     if gen == True:
-    #         return (card for card in self.hand if card.color == 'wild' or card.color == Game.currentColor or card.value == Game.currentValue)
-    #     else:
-    #         return [card for card in self.hand if card.color == 'wild' or card.color == Game.currentColor or card.value == Game.currentValue]
-
-
     def chooseColor(self):
         """Finds most commom color in hand that is not "wild." """
-        #Currently basic af. Needs to be updated be improved, but is not a priority for a while.
-        #May be taken care of by foward searching algorithim.
         counter = {}
         for card in self.hand:
             if card.color not in counter and card.color != 'wild':
@@ -132,43 +108,33 @@ class Player:
     #     if card != Card.badCard:
     #         self.hand.appendleft(card)
 
-    def draw(self):
+    def draw(self, cardInst, discardPileInst, drawPileInst):
         """Draws a card from the draw pile."""
         #add probability distribution updates here
-        card = DrawPile.draw()
-        if card != Card.badCard:
+        card = drawPileInst.draw(cardInst, discardPileInst)
+        if card != cardInst.badCard:
             self.hand.add(card)
 
-    def chooseRand(self):
+    def chooseRand(self, cardInst, gameInst, playerInst):
         "Chooses a card to play from hand."
         #insert foward searching here
         for card in self.hand:
-            if card.color == 'wild' or card.color == Game.currentColor or card.value == Game.currentValue:
+            if card.color == 'wild' or card.color == gameInst.currentColor or card.value == gameInst.currentValue:
                 self.hand.remove(card)
                 return card
         # if ErrorChecking.handLengths:
         #     ErrorChecking.output += Game.currentColor +' '+ str(Game.currentValue) +' '+ 'Player ' + str(Game.currentPlayer) + str(Player.all_[Game.currentPlayer].hand) + '\n'
-        return Card.badCard
+        return cardInst.badCard
 
-    # def chooseRand(self):
-    #     "Chooses a card to play from hand."
-    #     #insert foward searching here
-    #     validMoves = self.genValidMoves()
-    #     if validMoves == []:
-    #         return False
-    #     card = validMoves[0]
-    #     self.hand.remove(card)
-    #     return card
-
-    def chooseWFitness(self):
+    def chooseWFitness(self, cardInst, gameInst, playerInst):
         #what if valid moves for each potential card combination are memorized
         tF = -math.inf
-        tC = Card.badCard
+        tC = cardInst.badCard
         myHandSize = len(self.hand)
-        nextHandSize = len(Player.all_[(Game.currentPlayer + Game.direction) % Game.nPlayers].hand)
-        prevHandSize = len(Player.all_[(Game.currentPlayer - Game.direction) % Game.nPlayers].hand)
+        nextHandSize = len(playerInst.all_[(gameInst.currentPlayer + gameInst.direction) % gameInst.nPlayers].hand)
+        prevHandSize = len(playerInst.all_[(gameInst.currentPlayer - gameInst.direction) % gameInst.nPlayers].hand)
         for card in self.hand:
-            if card.color == 'wild' or card.color == Game.currentColor or card.value == Game.currentValue:
+            if card.color == 'wild' or card.color == gameInst.currentColor or card.value == gameInst.currentValue:
                 f = self.fitness(card, myHandSize, nextHandSize, prevHandSize)
                 if f > tF:
                     tF = f
@@ -180,52 +146,42 @@ class Player:
 
 class Card:
     """Base class for card representations."""
-    colors = ['yellow', 'red', 'blue', 'green', 'wild', 'bad']
-    values = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, '+2', '+4', 'skip', 'reverse', 'basic', 'bad']
-    badCard = None
-    allInstances = set()
-    baseDeck = []
-    wilds = set()
 
-    @classmethod
-    def createCards(cls):
-        cls.badCard = Card('bad', 'bad', 0, True)
-        for color in set(cls.colors) - {'wild', 'bad'}:
+    def createCards(self):
+        self.badCard = Card('bad', 'bad', 0, True)
+        for color in set(self.colors) - {'wild', 'bad'}:
             for i in range(10):
-                cls.baseDeck.append(Card(color, i, 0))
+                self.baseDeck.append(Card(self, i, 0))
             for i in range(1,10):
-                cls.baseDeck.append(Card(color, i, 1))
+                self.baseDeck.append(Card(self, i, 1))
             for i in range(2):
-                cls.baseDeck.append(Card(color, 'skip', i))
-                cls.baseDeck.append(Card(color, 'reverse', i))
-                cls.baseDeck.append(Card(color, '+2', i))
+                self.baseDeck.append(Card(color, 'skip', i))
+                self.baseDeck.append(Card(color, 'reverse', i))
+                self.baseDeck.append(Card(color, '+2', i))
         for i in range(4):
             wild = Card('wild', 'basic', i)
-            cls.baseDeck.append(wild)
-            cls.wilds.add(wild)
+            cselfls.baseDeck.append(wild)
+            self.wilds.add(wild)
             wild = Card('wild', '+4', i)
-            cls.baseDeck.append(wild)
-            cls.wilds.add(wild)
+            self.baseDeck.append(wild)
+            self.wilds.add(wild)
 
-        # for i in range(4):
-        #     for color in set(cls.colors) - {'wild', 'bad'}:
-        #         Card(color, 'basic', i)
-        #         Card(color, '+4', i)
-
-    # @classmethod
-    # def indexGenM(cls):
-    #     index = 0
-    #     while True:
-    #         yield index
-    #         index += 1
-
-    def __init__(self, color, value, dup, temp = False):
+    def __init__(self, color, value, dup, temp = False, container = False):
         """Sets the color and value of the card."""
-        self.color = color
-        self.value = value
-        self.hash = (self.colors.index(color))*1000 + (self.values.index(value))*10 + dup
-        if not temp:
-            self.allInstances.add(self)
+        if not container:
+            self.color = color
+            self.value = value
+            self.hash = (self.colors.index(color))*1000 + (self.values.index(value))*10 + dup
+            if not temp:
+                self.allInstances.add(self)
+        else:
+            self.badCard = None
+            self.baseDeck = None
+            self.colors = ['yellow', 'red', 'blue', 'green', 'wild', 'bad']
+            self.values = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, '+2', '+4', 'skip', 'reverse', 'basic', 'bad']
+            self.wilds = set()
+            self.allInstances = set()
+
 
     def __str__(self):
         return str(self.color) + ' ' + str(self.value)
@@ -240,77 +196,71 @@ class Card:
         return self.hash
 
 
-class DrawPile: #do these need to be que's? Would it be random enough if they were just sets?
+class DrawPile:
     """Base class representing the draw pile."""
-    stack = []
-    cardsLeft = 108
 
-    @classmethod
-    def draw(cls):
+    def __init__(self):
+        self.stack = []
+        self.cardsLeft = 108
+
+    def draw(self, cardInst, discardPileInst):
         """Draws a single card."""
-        if cls.cardsLeft == 0:
-            if DiscardPile.cards > 1:
-                cls.stack = deque(list(DiscardPile.stack)[1:])
-                random.shuffle(cls.stack)
-                DiscardPile.stack = deque([DiscardPile.stack[0]])
+        if self.cardsLeft == 0:
+            if discardPileInst.cards > 1:
+                self.stack = deque(list(discardPileInst.stack)[1:])
+                random.shuffle(self.stack)
+                discardPileInst.stack = deque([discardPileInst.stack[0]])
                 # print('Draw pile reupped')
-                cls.cardsLeft = len(cls.stack)
+                self.cardsLeft = len(self.stack)
             else:
-                return Card.badCard
-        cls.cardsLeft -= 1
-        if ErrorChecking.stacks:
-            ErrorChecking.record('DrawPile : ' + str(cls.stack) + ' ' + str(DrawPile.cardsLeft))
-        try:
-            return cls.stack.pop()
-        except:
-            print(ErrorChecking.output)
-            raise
+                return cardInst.badCard
+        self.cardsLeft -= 1
+        # if ErrorChecking.stacks:
+        #     ErrorChecking.record('DrawPile : ' + str(cls.stack) + ' ' + str(DrawPile.cardsLeft))
+        # try:
+        #     return cls.stack.pop()
+        # except:
+        #     print(ErrorChecking.output)
+        #     raise
 
-
-    # @classmethod
-    # def startdealdeque(cls):
-    #     """Deals 7 cards to all players."""
-    #     for player in Player.all_:
-    #         player.hand = deque([cls.draw() for i in range(7)])
-    #         cls.cardsLeft -= 7
-
-    @classmethod
-    def startdeal(cls):
+    def startdeal(self, cardInst, discardPileInst, playerInst):
         """Deals 7 cards to all players."""
-        for player in Player.all_:
-            player.hand = set([cls.draw() for i in range(7)])
-            cls.cardsLeft -= 7
+        for player in playerInst.all_:
+            player.hand = set([self.draw(cardInst, discardPileInst) for i in range(7)])
+            self.cardsLeft -= 7
 
 
 class DiscardPile:
     """Base class representing the discard pile."""
-    stack = None #cards discared so far
-    cards = 0
 
-    @classmethod
-    def add(cls, card):
+    def __init__(self):
+        self.stack = deque() #cards discarded so far
+        self.cards = 0
+
+    def add(self, card):
         """Takes a card and adds it to the discard pile."""
-        cls.cards += 1
-        if ErrorChecking.stacks:
-            ErrorChecking.record('DiscardPile : ' + str(cls.stack) + ' ' + str(DiscardPile.cards))
-        cls.stack.append(card)
+        self.cards += 1
+        # if ErrorChecking.stacks:
+        #     ErrorChecking.record('DiscardPile : ' + str(cls.stack) + ' ' + str(DiscardPile.cards))
+        self.stack.append(card)
 
 
 class Game:
     """Base containter for running the game."""
-    currentPlayer = 0 #index of Player.all_ list the references the current player
-    currentColor = None
-    currentValue = None
-    direction = 1 #1 for normal, -1 for reversed
-    cards = []
-    decks = None
-    nPlayers = None
 
-    @classmethod
-    def deckGen(cls):
+    def __init__(self, nPlayers):
+        self.nPlayers = None
+        self.currentPlayer = None
+        self.currentColor = None
+        self.currentValue = None
+        self.direction = 1 #1 for normal, -1 for reversed
+        self.decks = None
+
+
+    def deckGen(self, cardInst):
         decks = []
         for i in range(157):
-            decks.append(deque(Card.baseDeck.copy()))
+            decks.append(deque(cardInst.baseDeck.copy()))
             random.shuffle(decks[i])
         i = 0
         while True:
@@ -319,183 +269,103 @@ class Game:
             if i == 157:
                 i = 0
 
-    # @classmethod
-    # def reset(cls):
-    #     cls.currentPlayer = 0
-    #     cls.direction = 1
-    #     for player in Player.all_:
-    #         player.hand = []
-    #     DiscardPile.stack = deque()
-    #     DrawPile.stack = random.choice(Game.decks)
-    #     DrawPile.stack = deque(DrawPile.stack)
-    #     DrawPile.cardsLeft = 108
-    #     if ErrorChecking.handLengths:
-    #         ErrorChecking.output = ''
-
-    @classmethod
-    def reset(cls):
-        ErrorChecking.output = ''
-        cls.currentPlayer = random.randint(0, len(Player.all_) - 1)
-        cls.direction = 1
-        for player in Player.all_:
+    def reset(self, discardPileInst, drawPileInst, playerInst):
+        # ErrorChecking.output = ''
+        self.currentPlayer = random.randint(0, len(playerInst.all_) - 1)
+        self.direction = 1
+        for player in playerInst.all_:
             player.hand = set()
-        DiscardPile.stack = deque()
-        DiscardPile.cards = 0
-        DrawPile.stack = next(cls.decks)
-        DrawPile.cardsLeft = 108
-        if ErrorChecking.handLengths:
-            ErrorChecking.output = ''
+        discardPileInst.stack = deque()
+        discardPileInst.cards = 0
+        drawPileInst.stack = next(self.decks)
+        drawPileInst.cardsLeft = 108
+        # if ErrorChecking.handLengths:
+        #     ErrorChecking.output = ''
 
-
-    @classmethod
-    def init(cls):
+    def init(self, cardInst, discardPileInst, drawPileInst, playerInst):
         """Once cards have been dealt, run this to turn over the first card."""
-        card = DrawPile.draw()
+        card = drawPileInst.draw(cardInst, discardPileInst)
         while card.color == 'wild' and card.value == '+4': #the game cannot be stared with a wild +4
-            DrawPile.stack.append(card)
-            random.shuffle(DrawPile.stack)
-            card = DrawPile.draw()
-        DiscardPile.add(card)
+            drawPileInst.stack.append(card)
+            random.shuffle(drawPileInst.stack)
+            card = drawPileInst.draw(cardInst, discardPileInst)
+        discardPileInst.add(card)
         if card.color == 'wild':
-            cls.currentColor = Player.all_[cls.currentPlayer].chooseColor()
+            self.currentColor = Player.all_[self.currentPlayer].chooseColor()
         else:
-            cls.currentColor = card.color
+            self.currentColor = card.color
 
-        cls.currentValue = card.value
+        self.currentValue = card.value
         if card.value == 'reverse':
-            cls.direction *= -1
-            cls.currentPlayer += cls.direction
+            self.direction *= -1
+            self.currentPlayer += self.direction
         elif card.value == 'skip':
-            cls.currentPlayer += cls.direction
+            self.currentPlayer += self.direction
         elif card.value == '+2':
             for i in range(2):
-                Player.all_[cls.currentPlayer].draw()
-            cls.currentPlayer += cls.direction
-        cls.currentPlayer = cls.currentPlayer % len(Player.all_)
+                playerInst.all_[self.currentPlayer].draw(cardInst, discardPileInst, drawPileInst)
+            self.currentPlayer += self.direction
+        self.currentPlayer = self.currentPlayer % len(playerInst.all_)
 
-    @classmethod
-    def singlePlay(cls):
+    def singlePlay(self, cardInst, discardPileInst, drawPileInst, playerInst):
         """Carries out a single play for the next player."""
         #Complete - probability stuff.
-        currentPlayer = Player.all_[cls.currentPlayer]
+        currentPlayer = playerInst.all_[self.currentPlayer]
         if currentPlayer == Player.bot:
             fitFunction = currentPlayer.chooseWFitness
         else:
             fitFunction = currentPlayer.chooseRand
-        card = fitFunction()
+        card = fitFunction(cardInst, gameInst, playerInst)
         if card == Card.badCard:
-            currentPlayer.draw()
-            card = fitFunction()
+            currentPlayer.draw(cardInst, discardPileInst, drawPileInst)
+            card = fitFunction(cardInst, gameInst, playerInst)
         if card != Card.badCard:
-            DiscardPile.add(card)
+            discardPileInst.add(card)
             if card.color == 'wild':
-                cls.currentColor = currentPlayer.chooseColor()
+                self.currentColor = currentPlayer.chooseColor()
             if card.value in {'skip', 'reverse', '+2', '+4'}:
-                cls.actionCheck(card)
-            cls.currentValue = card.value
-        cls.currentPlayer += cls.direction
-        cls.currentPlayer = cls.currentPlayer % cls.nPlayers
+                self.actionCheck(card, cardInst, discardPileInst, drawPileInst, playerInst)
+            self.currentValue = card.value
+        self.currentPlayer += self.direction
+        self.currentPlayer = self.currentPlayer % self.nPlayers
 
-    @classmethod
-    def playRound(cls):
-        startPlayer = Player.all_[cls.currentPlayer]
-        cls.singlePlay()
-        currentPlayer = Player.all_[cls.currentPlayer]
-        while startPlayer != currentPlayer:
-            cls.singlePlay()
-            currentPlayer = Player.all_[cls.currentPlayer]
+    # @classmethod
+    # def playRound(cls, cardInst, discardPileInst, drawPileInst, playerInst):
+    #     startPlayer = Player.all_[cls.currentPlayer]
+    #     cls.singlePlay(cardInst, discardPileInst, drawPileInst, playerInst)
+    #     currentPlayer = Player.all_[cls.currentPlayer]
+    #     while startPlayer != currentPlayer:
+    #         cls.singlePlay(cardInst, discardPileInst, drawPileInst, playerInst)
+    #         currentPlayer = Player.all_[cls.currentPlayer]
 
-    @classmethod
-    def actionCheck(cls, card):
+    def actionCheck(self, card, cardInst, discardPileInst, drawPileInst, playerInst):
         """Carries out any effects triggered by an action card."""
         if card.value == 'reverse':
-            cls.direction *= -1
+            self.direction *= -1
         elif card.value == 'skip':
-            cls.currentPlayer += cls.direction
+            self.currentPlayer += self.direction
         elif card.value == '+2' or card.value == '+4':
-            cls.currentPlayer += cls.direction
-            cls.currentPlayer = cls.currentPlayer % cls.nPlayers
+            self.currentPlayer += self.direction
+            self.currentPlayer = self.currentPlayer % self.nPlayers
             for i in range(int(card.value[-1])):
-                Player.all_[cls.currentPlayer].draw()
+                playerInst.all_[self.currentPlayer].draw(cardInst, discardPileInst, drawPileInst)
 
 
 
 
 class Evo:
-    nActors = 8
-    itLowerLimit = 5
-    thresholdValue = 1
-    thresholdLength = 15
-    nParameters = 49
-    nGames = 100
-    parmRange = 100
-    nKeep = 2
-    #THOUGHTS IDEAS ECT
-        #better actors make more children?
-        #add mutation rate?
-        #lock parameters which have equilibriated
-        #perhaps unlock and relock over time
-        #clustering algorithim
-        #rather than having a coefficient for all possible functional forms, randomize the choice of functional
-            #only cross breed species with matching functional forms
-            #mutuate children from loners
-        #give opposing players parameters from other actors
-        #multi threading
-        #analyze differences in parameters of time for differerent portions of the top
-        #write results to a file
-        #increase number of games to test over as iteration number increases
-        #discard any actors that perform below average, especially in the beginining
-            #each generation keep above average until carry over cap reached
-        #do parents need to be retested generation after generation?
-        #in cross breeding explore other avenues besides averaging all values
-            #some averages
-            #some crossovers
-            #some mutations
-                #any ways to think about what an optimal coefficent of the above would be?
-        #random include or drop various nodes to determine which are necesarry?
-        #implement graphing of results
-        #visualize what the w/l ratio of a single parameter set is across generations. is it consistent? how much so?
-        #simultaniuis side evolution to improve accuracy of improvement
-        #evo -> stand alone
-        #label and group results in viewing
-        #incorperate w/l multigenerational record
-        #attempt 10 games, 8000 actors
-        #probabilistic fitness matching for cross breeding
-
-    #Priority 1
-        #SPEED UP UNO GAME SIMULATION!!
-            #create list/set of valid moves for every card at the beginning of simulation
-            #Potential Solution 1: Vectorize
-                #use numpy to multiply binary vectors to find crossover
-                #this will require significantly longer lists. Will the speed up overcome this?
-            #Potential Solution 2
-                #Use set comparision to do the same thing
-                #which cards in hand are in set that contains all valid move for the card on top of the discard pile
-
-    #Priority 2
-        #rewrite current evolution algorithim using DEAP library
-
-    #Priority 3
-        #implement randomization of node function,
-            #remove unnessary parameters
-            #determine how this will be incorperated into evolution
-            #functions:
-                # x
-                # 1/x
-                # + vs - ?
-                # x^2
-                #combinations of the above
-
-
 
     def __init__(self):
-
-        # actors = [[1 for i in range(nParameters)] for j in range(nActors)]
-        # actorHistory = {tuple(actor):(0,0) for actor in actors}
         self.fitHist = []
-        # fitAvgMax = 0
-        # improvIndex = 0
         self.avgActorHist = []
+        self.nActors = 8
+        self.itLowerLimit = 5
+        self.thresholdValue = 1
+        self.thresholdLength = 15
+        self.nParameters = 49
+        self.nGames = 100
+        self.parmRange = 100
+        self.nKeep = 2
 
 
     def mainLoop(self, fitnessCheck):
@@ -591,33 +461,38 @@ class Evo:
             # if iteration - improvIndex > thresholdLength:
             #     return top[0]
 
-def gameLoop(parameters):
+def gameLoop(parameters, cardInst, discardPileInst, drawPileInst, gameInst, playerInst):
     # print(len(Player.all_))
-    Player.parameters = parameters
-    Game.reset()
-    DrawPile.startdeal()
-    Game.init()
-    # bot.initPDists()
+    playerInst.parameters = parameters
+    gameInst.reset(discardPileInst, drawPileInst, playerInst)
+    drawPileInst.startdeal(cardInst, discardPileInst, playerInst)
+    gameInst.init(cardInst, discardPileInst, drawPileInst, playerInst)
     while True:
         # ErrorChecking.handLenRecord()
-        Game.singlePlay()
+        gameInst.singlePlay(cardInst, discardPileInst, drawPileInst, playerInst)
 
-        for player in Player.all_: #check length less often? if we take the smalled hand and multiple by four that is the soonest the game can end
+        for player in playerInst.all_: #check length less often? if we take the smalled hand and multiple by four that is the soonest the game can end
             if len(player.hand) == 0:
-                return player == Player.bot
+                return player == playerInst.bot
 
 if __name__ == '__main__':
-    bot = Player()
-    main.Player.bot = bot
-    p2 = main.Player()
-    p3 = main.Player()
-    p4 = main.Player()
-    main.Game.nPlayers = len(main.Player.all_)
-    main.Card.createCards()
-    main.Game.decks = main.Game.deckGen()
-    # Card.genAllValidMoves()
-    first = Evo()
-    first.mainLoop(main.fitnessCheck)
+    itNum = 0
+    parameterSets = Evo()
+    manager = multiprocessing.Manager()
+    return_dict = manager.dict()
+    jobs = []
+    for i in range(itNum):
+        p = multiprocessing.Process(target=worker.worker, args=(gameLoop, parameterSets[i], Card, DrawPile, DiscardPile, Game, Player, return_dict, itNum))
+        jobs.append(p)
+        p.start()
+
+    for proc in jobs:
+        proc.join()
+
+    print(return_dict.values())
+
+    # first = Evo()
+    # first.mainLoop(worker.fitnessCheck)
 
 
 
