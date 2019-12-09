@@ -1,9 +1,8 @@
 import main
 
-multiprocessing_func():
 
 def fitnessCheck(parameters, nGames, return_dict):
-    return_dict[parameters] = sum([main.gameLoop(parameters) for i in range(nGames)])
+    return_dict[parameters] = sum([gameLoop(parameters) for i in range(nGames)])
 
 
 # def multiprocessing_func(procnum, return_dict):
