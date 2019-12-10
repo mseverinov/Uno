@@ -7,7 +7,7 @@ from deap import creator
 from deap import tools
 
 class Evo:
-    nActors = 50
+    nActors = 100
     itLowerLimit = 5
     thresholdValue = 1
     thresholdLength = 15
@@ -71,7 +71,8 @@ class Evo:
                 # x^2
                 #combinations of the above
 
-
+    def zeroFoo(self):
+        return 0
 
     def __init__(self):
 
@@ -90,13 +91,20 @@ class Evo:
         self.toolbox = base.Toolbox() #toolbox container contains the individual, the population, as well as : functions, operators, and arguements
         self.toolbox.register("evaluate", fitnessCheck, self.nGames)
         self.toolbox.register("mate", tools.cxTwoPoint)
-        self.toolbox.register("mutate", tools.mutFlipBit, indpb=0.05)
+        self.toolbox.register("zeroMutate", tools.mutFlipBit, indpb=0.05)
+        self.toolbox.register("gausMutate", tools.mutGaussian, mu=0, sigma=10, indpb=0.05)
         self.toolbox.register("select", tools.selTournament, tournsize=3)
 
         # creating our population container
+        # self.toolbox.register("attr_bool", self.zeroFoo)
         self.toolbox.register("attr_bool", random.randint, -self.parmRange, self.parmRange)
         self.toolbox.register("individual", tools.initRepeat, creator.Individual, self.toolbox.attr_bool, self.nParameters) #initReapeat calsl the function container with a generator function corresponding to the calling n times the function .
         self.toolbox.register("population", tools.initRepeat, list, self.toolbox.individual) #create a population contains unfixed amount of individuals
+
+        # CXPB  is the probability with which two individuals are crossed
+        # MUTPB is the probability for mutating an individual
+        self.CXPB, self.MUTPB = 0.5, 0.2
+
 
     def mainLoop(self, fitnessCheck):
         start = 0
@@ -110,9 +118,7 @@ class Evo:
         for ind, fit in zip(population, fitnesses):
             fit = [fit]
             ind.fitness.values = fit
-        # CXPB  is the probability with which two individuals are crossed
-        # MUTPB is the probability for mutating an individual
-        CXPB, MUTPB = 0.5, 0.2
+
         fits = [ind.fitness.values[0] for ind in population]
 
         while continueCond:
@@ -123,16 +129,13 @@ class Evo:
             offspring = self.toolbox.select(population, len(population))  # selects top individual from 3 randomly chosen with replacemnt, as many times as there are members in the population
             offspring = list(map(self.toolbox.clone, offspring))  # Clone creates a copy of each individual so our new list does not reference the prior generation of individuals
 
-            for child1, child2 in zip(offspring[::2], offspring[1::2]):
-                if random.random() < CXPB:
-                    self.toolbox.mate(child1, child2)  # are child1 & child2 modified? are they the parents? do they become the children? are the both?
-                    del child1.fitness.values  # why delete these
-                    del child2.fitness.values
-            #
-            for mutant in offspring:
-                if random.random() < MUTPB:
-                    self.toolbox.mutate(mutant)  # modifes the individual in place
-                    del mutant.fitness.values
+
+            self.crossBreed(offspring)
+
+            # self.gausMutation(offspring)
+            # self.zeroMutation(offspring)
+            self.comboMutation(offspring)
+
 
             invalid_ind = [ind for ind in offspring if not ind.fitness.valid]  #the invalid marking saves processing resources
             fitnesses = map(self.toolbox.evaluate, invalid_ind) # Evaluate the individuals with an invalid fitness
@@ -141,22 +144,12 @@ class Evo:
 
             population[:] = offspring  # replace old population with new population
 
-            # Gather all the fitnesses in one list and print the stats
             fits = [ind.fitness.values[0] for ind in population]
-
-            length = len(population)
-            mean = sum(fits) / length
-            sum2 = sum(x*x for x in fits)
-            std = abs(sum2 / length - mean**2)**0.5
-
-            print("  Min %s" % min(fits))
-            print("  Max %s" % max(fits))
-            print("  Avg %s" % mean)
-            print("  Std %s" % std)
+            self.calcStats(population, fits)
+            print()
             end = time.time()
             # tools.selWorst(individuals, k, fit_attr='fitness')
 
-            # fitPairs = sorted([(actor, fitnessCheck(actor, self.nGames)) for actor in self.actors], key = lambda x: x[1], reverse = True)
             # avg, quartAvg, halfAvg, cumAvg = self.calcStats(fitPairs)
             # actorHistoryN = {}
             # for pair in fitPairs[:nActors//nKeep]:
@@ -170,7 +163,6 @@ class Evo:
             #     step = (self.nActors//4)//20
             # else:
             #     step = 1
-            # print([fitPairs[i][1] for i in range(0, self.nActors//4, step)], avg, str(quartAvg), str(halfAvg), str(cumAvg))
             # # avgActor = [sum([fitPairs[i][0][j] for i in range(nActors//nKeep//2)])/(nActors/nKeep/2) for j in range(nParameters)]
             # # avgActorHist.append(avgActor)
             # # print([top[0]])
@@ -178,32 +170,18 @@ class Evo:
             # top = [fitPairs[i][0] for i in range(self.nActors//2)]
             # if self.endCheck(iteration):
             #     return top[0]
-            #
-            # nNewActors = 3*self.nActors//8
-            # actors = top + self.createChildren(top) + self.createRandActors(nNewActors)
-            # end = time.time()
 
 
-    # def createRandActors(self, n):
-    #     # return [[random.random() for i in range(nParameters)] for j in range(n)]
-    #     return [[random.randint(-1*self.parmRange, self.parmRange) for i in range(self.nParameters)] for j in range(n)]
+    def calcStats(self, population, fits):
+            length = len(population)
+            mean = sum(fits) / length
+            sum2 = sum(x*x for x in fits)
+            std = abs(sum2 / length - mean**2)**0.5
 
-
-    def createChildren(self, parents):
-        # random.shuffle(parents)
-        children = []
-        for i in range(0, self.nActors//(self.nKeep*2), 2):
-            actor = []
-            for j in range(self.nParameters):
-                actor.append((parents[i][j] + parents[i+1][j])/2)
-            children.append(actor)
-        # print(children)
-        # children = [ [(topHalf[i][j] + topHalf[i+1][j])/2 for j in range(nParameters)] for i in range(nActors//2)]
-        # actors = top + children + [[random.random() for i in range(nParameters)] for j in range(5*nActors//8)]
-        return children
-
-
-    # def calcStats(self, fitPairs):
+            print("  Min %s" % min(fits))
+            print("  Max %s" % max(fits))
+            print("  Avg %s" % mean)
+            print("  Std %s" % std)
     #     top = [fitPairs[i][0] for i in range(self.nActors//self.nKeep)]
     #     avg = sum([fitPairs[i][1] for i in range(self.nActors//self.nKeep//2)])/(self.nGames*self.nActors/self.nKeep/2/4)
     #     self.fitHist.append(avg)
@@ -215,6 +193,35 @@ class Evo:
     #     quartAvg = sum(quart)/(len(quart))
     #
     #     return avg, quartAvg, halfAvg, cumAvg
+            # print([fitPairs[i][1] for i in range(0, self.nActors//4, step)], avg, str(quartAvg), str(halfAvg), str(cumAvg)
+
+    def zeroMutation(self, offspring):
+        for mutant in offspring:
+            if random.random() < self.MUTPB:
+                self.toolbox.zeroMutate(mutant)
+                del mutant.fitness.values
+
+    def gausMutation(self, offspring):
+        for mutant in offspring:
+            if random.random() < self.MUTPB:
+                self.toolbox.gausMutate(mutant)
+                del mutant.fitness.values
+
+    def comboMutation(self, offspring):
+        for mutant in offspring:
+            if random.random() < self.MUTPB:
+                self.toolbox.gausMutate(mutant)
+                self.toolbox.zeroMutate(mutant)
+                del mutant.fitness.values
+
+
+    def crossBreed(self, offspring):
+        for child1, child2 in zip(offspring[::2], offspring[1::2]):
+            if random.random() < self.CXPB:
+                self.toolbox.mate(child1, child2)  # are child1 & child2 modified? are they the parents? do they become the children? are the both?
+                del child1.fitness.values
+                del child2.fitness.values
+
 
     # def endCheck(self,iteration):
     #     if iteration > self.itLowerLimit:

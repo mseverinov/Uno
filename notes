@@ -13,13 +13,13 @@ OMFG data can share HASH VALUES, a set probably can't contain multiple elements 
                                         this is fine for valid move sets!, hands would just need to be transitioned back to ques
                                               transitioning hands to sets did result in a significant speed up though. oohf
 
-would transitioning color/value attributes into numbers speed up processsing?
+would transitioning color/value attributes into numbers speed up processing?
     a map can always be used to regenerate the names for display
 
 could color and value attributes be removed? Could cards be identified exclusively by their hash?
 
 
- #modify game class to hold top card from draw pile with maybe a modifier to specifiy the color or maybe have one card stay in place and just modify its values over time
+ #modify game class to hold top card from draw pile with maybe a modifier to specify the color or maybe have one card stay in place and just modify its values over time
 #staged fitness calls. rough then more precise
 
 
