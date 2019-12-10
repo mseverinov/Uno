@@ -9,11 +9,13 @@ def evalOneMax(individual):
     return sum(individual)
 
 
-def main():
-    pop = toolbox.population(n=300) #creates our population, this is why n was not fixed earlier
+def main(popSize):
+    pop = toolbox.population(n=popSize) #creates our population, this is why n was not fixed earlier
 
     fitnesses = list(map(toolbox.evaluate, pop)) # Evaluates the entire population
+    # fits = []
     for ind, fit in zip(pop, fitnesses):
+        # fits.append(fit)
         fit = [fit]
         # print(ind.fitness.values, fit)
         ind.fitness.values = fit #used the fitness attribute we created earlier, assignes the generated fit value to it
@@ -30,20 +32,25 @@ def main():
         # A new generation
         g = g + 1
         print("-- Generation %i --" % g)
-        offspring = toolbox.select(pop, len(pop)) #selects all individuals in the population
+
+        offspring = toolbox.select(pop, len(pop))
+        # print(len(fits), sorted([fit for fit in fits], reverse = True))
+        for i in range(len(pop)):
+            print(pop[i])
+        # deap.tools.selTournament(individuals = population, k = population, tournsize = 3, fit_attr='fitness')
         offspring = list(map(toolbox.clone, offspring)) # Clone creates a copy of each individual so our new list does not reference the prior generation of individuals
 
         # Apply crossover and mutation on the offspring
-        for child1, child2 in zip(offspring[::2], offspring[1::2]):
-            if random.random() < CXPB:
-                toolbox.mate(child1, child2) #are child1 & child2 modified? are they the parents? do they become the children? are the both?
-                del child1.fitness.values #why delete these
-                del child2.fitness.values
+        # for child1, child2 in zip(offspring[::2], offspring[1::2]):
+        #     if random.random() < CXPB:
+        #         toolbox.mate(child1, child2) #are child1 & child2 modified? are they the parents? do they become the children? are the both?
+        #         del child1.fitness.values #why delete these
+        #         del child2.fitness.values
 
-        for mutant in offspring:
-            if random.random() < MUTPB:
-                toolbox.mutate(mutant) #modifes the individual in place
-                del mutant.fitness.values
+        # for mutant in offspring:
+        #     if random.random() < MUTPB:
+        #         toolbox.mutate(mutant) #modifes the individual in place
+        #         del mutant.fitness.values
 
         invalid_ind = [ind for ind in offspring if not ind.fitness.valid]  #the invalid marking saves processing resources
         fitnesses = map(toolbox.evaluate, invalid_ind) # Evaluate the individuals with an invalid fitness
@@ -66,7 +73,7 @@ def main():
         print("  Std %s" % std)
 
 
-
+popSize = 100
 
 
 
@@ -92,4 +99,4 @@ toolbox.register("mate", tools.cxTwoPoint)
 toolbox.register("mutate", tools.mutFlipBit, indpb=0.05)
 toolbox.register("select", tools.selTournament, tournsize=3)
 
-main()
+main(popSize)

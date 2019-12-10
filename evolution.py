@@ -7,12 +7,12 @@ from deap import creator
 from deap import tools
 
 class Evo:
-    nActors = 8
+    nActors = 50
     itLowerLimit = 5
     thresholdValue = 1
     thresholdLength = 15
     nParameters = 49
-    nGames = 100
+    nGames = 500
     parmRange = 100
     nKeep = 2
     #THOUGHTS IDEAS ECT
@@ -88,15 +88,15 @@ class Evo:
         creator.create("Individual", list, fitness=creator.FitnessMax)
 
         self.toolbox = base.Toolbox() #toolbox container contains the individual, the population, as well as : functions, operators, and arguements
-        self.toolbox.register("evaluate", fitnessCheck)
+        self.toolbox.register("evaluate", fitnessCheck, self.nGames)
         self.toolbox.register("mate", tools.cxTwoPoint)
         self.toolbox.register("mutate", tools.mutFlipBit, indpb=0.05)
         self.toolbox.register("select", tools.selTournament, tournsize=3)
 
         # creating our population container
-        self.toolbox.register("attr_bool", random.random)
-        self.toolbox.register("individual", tools.initRepeat, creator.Individual, toolbox.attr_bool, self.nParameters) #initReapeat calsl the function container with a generator function corresponding to the calling n times the function .
-        self.toolbox.register("population", tools.initRepeat, list, toolbox.individual) #create a population contains unfixed amount of individuals
+        self.toolbox.register("attr_bool", random.randint, -self.parmRange, self.parmRange)
+        self.toolbox.register("individual", tools.initRepeat, creator.Individual, self.toolbox.attr_bool, self.nParameters) #initReapeat calsl the function container with a generator function corresponding to the calling n times the function .
+        self.toolbox.register("population", tools.initRepeat, list, self.toolbox.individual) #create a population contains unfixed amount of individuals
 
     def mainLoop(self, fitnessCheck):
         start = 0
@@ -119,8 +119,8 @@ class Evo:
             print('it:', iteration, 'time:', int(end-start))
             start = time.time()
             iteration += 1
-
-            offspring = self.toolbox.select(population, len(population))  # selects all individuals in the population
+            # tournament selection used in this method removes lower fitness individuals
+            offspring = self.toolbox.select(population, len(population))  # selects top individual from 3 randomly chosen with replacemnt, as many times as there are members in the population
             offspring = list(map(self.toolbox.clone, offspring))  # Clone creates a copy of each individual so our new list does not reference the prior generation of individuals
 
             for child1, child2 in zip(offspring[::2], offspring[1::2]):
@@ -128,11 +128,16 @@ class Evo:
                     self.toolbox.mate(child1, child2)  # are child1 & child2 modified? are they the parents? do they become the children? are the both?
                     del child1.fitness.values  # why delete these
                     del child2.fitness.values
-
+            #
             for mutant in offspring:
                 if random.random() < MUTPB:
                     self.toolbox.mutate(mutant)  # modifes the individual in place
                     del mutant.fitness.values
+
+            invalid_ind = [ind for ind in offspring if not ind.fitness.valid]  #the invalid marking saves processing resources
+            fitnesses = map(self.toolbox.evaluate, invalid_ind) # Evaluate the individuals with an invalid fitness
+            for ind, fit in zip(invalid_ind, fitnesses):
+                ind.fitness.values = [fit]
 
             population[:] = offspring  # replace old population with new population
 
@@ -148,6 +153,8 @@ class Evo:
             print("  Max %s" % max(fits))
             print("  Avg %s" % mean)
             print("  Std %s" % std)
+            end = time.time()
+            # tools.selWorst(individuals, k, fit_attr='fitness')
 
             # fitPairs = sorted([(actor, fitnessCheck(actor, self.nGames)) for actor in self.actors], key = lambda x: x[1], reverse = True)
             # avg, quartAvg, halfAvg, cumAvg = self.calcStats(fitPairs)
@@ -177,9 +184,9 @@ class Evo:
             # end = time.time()
 
 
-    def createRandActors(self, n):
-        # return [[random.random() for i in range(nParameters)] for j in range(n)]
-        return [[random.randint(-1*self.parmRange, self.parmRange) for i in range(self.nParameters)] for j in range(n)]
+    # def createRandActors(self, n):
+    #     # return [[random.random() for i in range(nParameters)] for j in range(n)]
+    #     return [[random.randint(-1*self.parmRange, self.parmRange) for i in range(self.nParameters)] for j in range(n)]
 
 
     def createChildren(self, parents):
@@ -196,24 +203,24 @@ class Evo:
         return children
 
 
-    def calcStats(self, fitPairs):
-        top = [fitPairs[i][0] for i in range(self.nActors//self.nKeep)]
-        avg = sum([fitPairs[i][1] for i in range(self.nActors//self.nKeep//2)])/(self.nGames*self.nActors/self.nKeep/2/4)
-        self.fitHist.append(avg)
+    # def calcStats(self, fitPairs):
+    #     top = [fitPairs[i][0] for i in range(self.nActors//self.nKeep)]
+    #     avg = sum([fitPairs[i][1] for i in range(self.nActors//self.nKeep//2)])/(self.nGames*self.nActors/self.nKeep/2/4)
+    #     self.fitHist.append(avg)
+    #
+    #     cumAvg = sum(self.fitHist)/len(self.fitHist)
+    #     half = self.fitHist[len(self.fitHist)//2:]
+    #     halfAvg = sum(half)/(len(half))
+    #     quart = self.fitHist[len(self.fitHist)//4:]
+    #     quartAvg = sum(quart)/(len(quart))
+    #
+    #     return avg, quartAvg, halfAvg, cumAvg
 
-        cumAvg = sum(self.fitHist)/len(self.fitHist)
-        half = self.fitHist[len(self.fitHist)//2:]
-        halfAvg = sum(half)/(len(half))
-        quart = self.fitHist[len(self.fitHist)//4:]
-        quartAvg = sum(quart)/(len(quart))
-
-        return avg, quartAvg, halfAvg, cumAvg
-
-    def endCheck(self,iteration):
-        if iteration > self.itLowerLimit:
-            return True
-        else:
-            return False
+    # def endCheck(self,iteration):
+    #     if iteration > self.itLowerLimit:
+    #         return True
+    #     else:
+    #         return False
 
             # if runningAvg > fitAvgMax + thresholdValue:
             #     fitAvgMax = runningAvg

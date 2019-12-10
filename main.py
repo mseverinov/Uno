@@ -429,7 +429,7 @@ def gameLoop(parameters):
                 return player == Player.bot
 
 
-def fitnessCheck(parameters, nGames):
+def fitnessCheck(nGames, parameters):
     # ErrorChecking.iteration += 1
     # if ErrorChecking.iteration % 40 == 0:
     #     print(ErrorChecking.iteration)
@@ -450,6 +450,8 @@ def main():
     # Player.genAllValidMoves()
 
     first = Evo()
+    first.deapSetup(fitnessCheck)
     first.mainLoop(fitnessCheck)
 
-print(cProfile.run('main()',sort='tottime'))
+# print(cProfile.run('main()',sort='tottime'))
+main()
