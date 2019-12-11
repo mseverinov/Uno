@@ -150,26 +150,16 @@ class Card:
         self.badCard = Card('bad', 'bad', 0, True)
         for color in set(self.colors) - {'wild', 'bad'}:
             for i in range(10):
-<<<<<<< HEAD
                 self.baseDeck.append(Card(color, i, 0))
             for i in range(1,10):
                 self.baseDeck.append(Card(color, i, 1))
-=======
-                self.baseDeck.append(Card(self, i, 0))
-            for i in range(1,10):
-                self.baseDeck.append(Card(self, i, 1))
->>>>>>> 9bef32c93d48e5e1068f25ceea464158883bdded
             for i in range(2):
                 self.baseDeck.append(Card(color, 'skip', i))
                 self.baseDeck.append(Card(color, 'reverse', i))
                 self.baseDeck.append(Card(color, '+2', i))
         for i in range(4):
             wild = Card('wild', 'basic', i)
-<<<<<<< HEAD
             self.baseDeck.append(wild)
-=======
-            cselfls.baseDeck.append(wild)
->>>>>>> 9bef32c93d48e5e1068f25ceea464158883bdded
             self.wilds.add(wild)
             wild = Card('wild', '+4', i)
             self.baseDeck.append(wild)
@@ -180,7 +170,6 @@ class Card:
         if not container:
             self.color = color
             self.value = value
-<<<<<<< HEAD
             self.hash = (['yellow', 'red', 'blue', 'green', 'wild', 'bad'].index(color))*1000 + ([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, '+2', '+4', 'skip', 'reverse', 'basic', 'bad'].index(value))*10 + dup
             # if not temp:
             #     self.allInstances.add(self)
@@ -191,18 +180,6 @@ class Card:
             self.values = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, '+2', '+4', 'skip', 'reverse', 'basic', 'bad']
             self.wilds = set()
             # self.allInstances = set()
-=======
-            self.hash = (self.colors.index(color))*1000 + (self.values.index(value))*10 + dup
-            if not temp:
-                self.allInstances.add(self)
-        else:
-            self.badCard = None
-            self.baseDeck = None
-            self.colors = ['yellow', 'red', 'blue', 'green', 'wild', 'bad']
-            self.values = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, '+2', '+4', 'skip', 'reverse', 'basic', 'bad']
-            self.wilds = set()
-            self.allInstances = set()
->>>>>>> 9bef32c93d48e5e1068f25ceea464158883bdded
 
 
     def __str__(self):
@@ -239,15 +216,7 @@ class DrawPile:
         self.cardsLeft -= 1
         # if ErrorChecking.stacks:
         #     ErrorChecking.record('DrawPile : ' + str(cls.stack) + ' ' + str(DrawPile.cardsLeft))
-<<<<<<< HEAD
         return self.stack.pop()
-=======
-        # try:
-        #     return cls.stack.pop()
-        # except:
-        #     print(ErrorChecking.output)
-        #     raise
->>>>>>> 9bef32c93d48e5e1068f25ceea464158883bdded
 
     def startdeal(self, cardInst, discardPileInst, playerInst):
         """Deals 7 cards to all players."""
@@ -274,11 +243,7 @@ class DiscardPile:
 class Game:
     """Base containter for running the game."""
 
-<<<<<<< HEAD
     def __init__(self):
-=======
-    def __init__(self, nPlayers):
->>>>>>> 9bef32c93d48e5e1068f25ceea464158883bdded
         self.nPlayers = None
         self.currentPlayer = None
         self.currentColor = None
@@ -314,10 +279,7 @@ class Game:
 
     def init(self, cardInst, discardPileInst, drawPileInst, playerInst):
         """Once cards have been dealt, run this to turn over the first card."""
-<<<<<<< HEAD
         self.nPlayers = len(playerInst.all_)
-=======
->>>>>>> 9bef32c93d48e5e1068f25ceea464158883bdded
         card = drawPileInst.draw(cardInst, discardPileInst)
         while card.color == 'wild' and card.value == '+4': #the game cannot be stared with a wild +4
             drawPileInst.stack.append(card)
@@ -325,11 +287,7 @@ class Game:
             card = drawPileInst.draw(cardInst, discardPileInst)
         discardPileInst.add(card)
         if card.color == 'wild':
-<<<<<<< HEAD
             self.currentColor = playerInst.all_[self.currentPlayer].chooseColor()
-=======
-            self.currentColor = Player.all_[self.currentPlayer].chooseColor()
->>>>>>> 9bef32c93d48e5e1068f25ceea464158883bdded
         else:
             self.currentColor = card.color
 
@@ -345,34 +303,19 @@ class Game:
             self.currentPlayer += self.direction
         self.currentPlayer = self.currentPlayer % len(playerInst.all_)
 
-<<<<<<< HEAD
     def singlePlay(self, cardInst, discardPileInst, drawPileInst, gameInst, playerInst):
         """Carries out a single play for the next player."""
         #Complete - probability stuff.
         currentPlayer = playerInst.all_[self.currentPlayer]
         if currentPlayer == playerInst.bot:
-=======
-    def singlePlay(self, cardInst, discardPileInst, drawPileInst, playerInst):
-        """Carries out a single play for the next player."""
-        #Complete - probability stuff.
-        currentPlayer = playerInst.all_[self.currentPlayer]
-        if currentPlayer == Player.bot:
->>>>>>> 9bef32c93d48e5e1068f25ceea464158883bdded
             fitFunction = currentPlayer.chooseWFitness
         else:
             fitFunction = currentPlayer.chooseRand
         card = fitFunction(cardInst, gameInst, playerInst)
-<<<<<<< HEAD
         if card == cardInst.badCard:
             currentPlayer.draw(cardInst, discardPileInst, drawPileInst)
             card = fitFunction(cardInst, gameInst, playerInst)
         if card != cardInst.badCard:
-=======
-        if card == Card.badCard:
-            currentPlayer.draw(cardInst, discardPileInst, drawPileInst)
-            card = fitFunction(cardInst, gameInst, playerInst)
-        if card != Card.badCard:
->>>>>>> 9bef32c93d48e5e1068f25ceea464158883bdded
             discardPileInst.add(card)
             if card.color == 'wild':
                 self.currentColor = currentPlayer.chooseColor()
@@ -402,12 +345,6 @@ class Game:
             self.currentPlayer = self.currentPlayer % self.nPlayers
             for i in range(int(card.value[-1])):
                 playerInst.all_[self.currentPlayer].draw(cardInst, discardPileInst, drawPileInst)
-<<<<<<< HEAD
-=======
-
-
-
->>>>>>> 9bef32c93d48e5e1068f25ceea464158883bdded
 
 class Evo:
 
@@ -419,11 +356,7 @@ class Evo:
         self.thresholdValue = 1
         self.thresholdLength = 15
         self.nParameters = 49
-<<<<<<< HEAD
-
-=======
         self.nGames = 100
->>>>>>> 9bef32c93d48e5e1068f25ceea464158883bdded
         self.parmRange = 100
         self.nKeep = 2
 
@@ -511,18 +444,13 @@ def gameLoop(parameters, cardInst, discardPileInst, drawPileInst, gameInst, play
     gameInst.init(cardInst, discardPileInst, drawPileInst, playerInst)
     while True:
         # ErrorChecking.handLenRecord()
-<<<<<<< HEAD
         gameInst.singlePlay(cardInst, discardPileInst, drawPileInst, gameInst, playerInst)
-=======
-        gameInst.singlePlay(cardInst, discardPileInst, drawPileInst, playerInst)
->>>>>>> 9bef32c93d48e5e1068f25ceea464158883bdded
 
         for player in playerInst.all_: #check length less often? if we take the smalled hand and multiple by four that is the soonest the game can end
             if len(player.hand) == 0:
                 return player == playerInst.bot
 
 if __name__ == '__main__':
-<<<<<<< HEAD
     nActors = 160
     evoInst = Evo()
     parameterSets = evoInst.createRandActors(nActors)
@@ -531,29 +459,13 @@ if __name__ == '__main__':
     jobs = []
     for i in range(nActors):
         p = multiprocessing.Process(target=worker.worker, args=(gameLoop, parameterSets[i], Card, DrawPile, DiscardPile, Game, Player, return_dict, i))
-=======
-    manager = multiprocessing.Manager()
-    return_dict = manager.dict()
-    jobs = []
-    for i in range(5):
-        p = multiprocessing.Process(target=worker.worker, args=(i, return_dict))
->>>>>>> 9bef32c93d48e5e1068f25ceea464158883bdded
         jobs.append(p)
         p.start()
 
     for proc in jobs:
         proc.join()
 
-<<<<<<< HEAD
     print([sum(return_dict.values()[i]) for i in range(nActors)])
-=======
-    print(return_dict.values())
-
-    itNum = 0
-    parameters = []
-    for i in range(itNum):
-        worker(gameLoop, parameters, Card, DrawPile, DiscardPile, Game, Player, return_dict, itNum)
->>>>>>> 9bef32c93d48e5e1068f25ceea464158883bdded
 
     # first = Evo()
     # first.mainLoop(worker.fitnessCheck)
