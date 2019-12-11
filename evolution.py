@@ -4,12 +4,12 @@ from collections import deque
 import multiprocessing
 
 class Evo:
-    nActors = 8
+    nActors = 80
     itLowerLimit = 5
     thresholdValue = 1
     thresholdLength = 15
     nParameters = 49
-    nGames = 100
+    nGames = 1000
     parmRange = 100
     nKeep = 2
     #THOUGHTS IDEAS ECT

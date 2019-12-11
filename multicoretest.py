@@ -3,7 +3,6 @@ import time
 import random
 import worker
 from collections import deque
-import main
 import cProfile
 import math
 #ACTION ITEMS
@@ -151,16 +150,16 @@ class Card:
         self.badCard = Card('bad', 'bad', 0, True)
         for color in set(self.colors) - {'wild', 'bad'}:
             for i in range(10):
-                self.baseDeck.append(Card(self, i, 0))
+                self.baseDeck.append(Card(color, i, 0))
             for i in range(1,10):
-                self.baseDeck.append(Card(self, i, 1))
+                self.baseDeck.append(Card(color, i, 1))
             for i in range(2):
                 self.baseDeck.append(Card(color, 'skip', i))
                 self.baseDeck.append(Card(color, 'reverse', i))
                 self.baseDeck.append(Card(color, '+2', i))
         for i in range(4):
             wild = Card('wild', 'basic', i)
-            cselfls.baseDeck.append(wild)
+            self.baseDeck.append(wild)
             self.wilds.add(wild)
             wild = Card('wild', '+4', i)
             self.baseDeck.append(wild)
@@ -171,16 +170,16 @@ class Card:
         if not container:
             self.color = color
             self.value = value
-            self.hash = (self.colors.index(color))*1000 + (self.values.index(value))*10 + dup
-            if not temp:
-                self.allInstances.add(self)
+            self.hash = (['yellow', 'red', 'blue', 'green', 'wild', 'bad'].index(color))*1000 + ([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, '+2', '+4', 'skip', 'reverse', 'basic', 'bad'].index(value))*10 + dup
+            # if not temp:
+            #     self.allInstances.add(self)
         else:
             self.badCard = None
-            self.baseDeck = None
+            self.baseDeck = []
             self.colors = ['yellow', 'red', 'blue', 'green', 'wild', 'bad']
             self.values = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, '+2', '+4', 'skip', 'reverse', 'basic', 'bad']
             self.wilds = set()
-            self.allInstances = set()
+            # self.allInstances = set()
 
 
     def __str__(self):
@@ -217,11 +216,7 @@ class DrawPile:
         self.cardsLeft -= 1
         # if ErrorChecking.stacks:
         #     ErrorChecking.record('DrawPile : ' + str(cls.stack) + ' ' + str(DrawPile.cardsLeft))
-        # try:
-        #     return cls.stack.pop()
-        # except:
-        #     print(ErrorChecking.output)
-        #     raise
+        return self.stack.pop()
 
     def startdeal(self, cardInst, discardPileInst, playerInst):
         """Deals 7 cards to all players."""
@@ -248,7 +243,7 @@ class DiscardPile:
 class Game:
     """Base containter for running the game."""
 
-    def __init__(self, nPlayers):
+    def __init__(self):
         self.nPlayers = None
         self.currentPlayer = None
         self.currentColor = None
@@ -284,6 +279,7 @@ class Game:
 
     def init(self, cardInst, discardPileInst, drawPileInst, playerInst):
         """Once cards have been dealt, run this to turn over the first card."""
+        self.nPlayers = len(playerInst.all_)
         card = drawPileInst.draw(cardInst, discardPileInst)
         while card.color == 'wild' and card.value == '+4': #the game cannot be stared with a wild +4
             drawPileInst.stack.append(card)
@@ -291,7 +287,7 @@ class Game:
             card = drawPileInst.draw(cardInst, discardPileInst)
         discardPileInst.add(card)
         if card.color == 'wild':
-            self.currentColor = Player.all_[self.currentPlayer].chooseColor()
+            self.currentColor = playerInst.all_[self.currentPlayer].chooseColor()
         else:
             self.currentColor = card.color
 
@@ -307,19 +303,19 @@ class Game:
             self.currentPlayer += self.direction
         self.currentPlayer = self.currentPlayer % len(playerInst.all_)
 
-    def singlePlay(self, cardInst, discardPileInst, drawPileInst, playerInst):
+    def singlePlay(self, cardInst, discardPileInst, drawPileInst, gameInst, playerInst):
         """Carries out a single play for the next player."""
         #Complete - probability stuff.
         currentPlayer = playerInst.all_[self.currentPlayer]
-        if currentPlayer == Player.bot:
+        if currentPlayer == playerInst.bot:
             fitFunction = currentPlayer.chooseWFitness
         else:
             fitFunction = currentPlayer.chooseRand
         card = fitFunction(cardInst, gameInst, playerInst)
-        if card == Card.badCard:
+        if card == cardInst.badCard:
             currentPlayer.draw(cardInst, discardPileInst, drawPileInst)
             card = fitFunction(cardInst, gameInst, playerInst)
-        if card != Card.badCard:
+        if card != cardInst.badCard:
             discardPileInst.add(card)
             if card.color == 'wild':
                 self.currentColor = currentPlayer.chooseColor()
@@ -350,9 +346,6 @@ class Game:
             for i in range(int(card.value[-1])):
                 playerInst.all_[self.currentPlayer].draw(cardInst, discardPileInst, drawPileInst)
 
-
-
-
 class Evo:
 
     def __init__(self):
@@ -363,7 +356,7 @@ class Evo:
         self.thresholdValue = 1
         self.thresholdLength = 15
         self.nParameters = 49
-        self.nGames = 100
+
         self.parmRange = 100
         self.nKeep = 2
 
@@ -382,7 +375,7 @@ class Evo:
             return_dict = manager.dict()
             processes = []
             for actor in self.actors:
-                p = multiprocessing.Process(target=multi.fitnessCheck, args=(actor, self.nGames, return_dict))
+                p = multiprocessing.Process(target=fitnessCheck, args=(actor, self.nGames, return_dict))
                 processes.append(p)
                 p.start()
 
@@ -390,23 +383,12 @@ class Evo:
                 process.join()
             fitPairs = sorted([(key, return_dict[key]) for key in return_dict], key = lambda x: x[1], reverse = True)
             avg, quartAvg, halfAvg, cumAvg = self.calcStats(fitPairs)
-            # actorHistoryN = {}
-            # for pair in fitPairs[:nActors//nKeep]:
-            #     tActor = tuple(pair[0])
-            #     if tActor in actorHistory:
-            #         actorHistoryN[tActor] = (pair[1] + actorHistory[tActor][0], nGames + actorHistory[tActor][1])
-            #     else:
-            #         actorHistoryN[tActor] = (pair[1], nGames)
-            # actorHistory = actorHistoryN
+
             if self.nActors//4 > 20:
                 step = (self.nActors//4)//20
             else:
                 step = 1
             print([fitPairs[i][1] for i in range(0, self.nActors//4, step)], avg, str(quartAvg), str(halfAvg), str(cumAvg))
-            # avgActor = [sum([fitPairs[i][0][j] for i in range(nActors//nKeep//2)])/(nActors/nKeep/2) for j in range(nParameters)]
-            # avgActorHist.append(avgActor)
-            # print([top[0]])
-            # print([sum([avgActorHist[i][j] for i in range(len(avgActorHist))])//len(avgActorHist) for j in range(nParameters)])
             top = [fitPairs[i][0] for i in range(self.nActors//2)]
             if self.endCheck(iteration):
                 return top[0]
@@ -415,23 +397,16 @@ class Evo:
             actors = top + self.createChildren(top) + self.createRandActors(nNewActors)
             end = time.time()
 
-
     def createRandActors(self, n):
-        # return [[random.random() for i in range(nParameters)] for j in range(n)]
         return [[random.randint(-1*self.parmRange, self.parmRange) for i in range(self.nParameters)] for j in range(n)]
 
-
     def createChildren(self, parents):
-        # random.shuffle(parents)
         children = []
         for i in range(0, self.nActors//(self.nKeep*2), 2):
             actor = []
             for j in range(self.nParameters):
                 actor.append((parents[i][j] + parents[i+1][j])/2)
             children.append(actor)
-        # print(children)
-        # children = [ [(topHalf[i][j] + topHalf[i+1][j])/2 for j in range(nParameters)] for i in range(nActors//2)]
-        # actors = top + children + [[random.random() for i in range(nParameters)] for j in range(5*nActors//8)]
         return children
 
 
@@ -469,27 +444,28 @@ def gameLoop(parameters, cardInst, discardPileInst, drawPileInst, gameInst, play
     gameInst.init(cardInst, discardPileInst, drawPileInst, playerInst)
     while True:
         # ErrorChecking.handLenRecord()
-        gameInst.singlePlay(cardInst, discardPileInst, drawPileInst, playerInst)
+        gameInst.singlePlay(cardInst, discardPileInst, drawPileInst, gameInst, playerInst)
 
         for player in playerInst.all_: #check length less often? if we take the smalled hand and multiple by four that is the soonest the game can end
             if len(player.hand) == 0:
                 return player == playerInst.bot
 
 if __name__ == '__main__':
-    itNum = 0
-    parameterSets = Evo()
+    nActors = 160
+    evoInst = Evo()
+    parameterSets = evoInst.createRandActors(nActors)
     manager = multiprocessing.Manager()
     return_dict = manager.dict()
     jobs = []
-    for i in range(itNum):
-        p = multiprocessing.Process(target=worker.worker, args=(gameLoop, parameterSets[i], Card, DrawPile, DiscardPile, Game, Player, return_dict, itNum))
+    for i in range(nActors):
+        p = multiprocessing.Process(target=worker.worker, args=(gameLoop, parameterSets[i], Card, DrawPile, DiscardPile, Game, Player, return_dict, i))
         jobs.append(p)
         p.start()
 
     for proc in jobs:
         proc.join()
 
-    print(return_dict.values())
+    print([sum(return_dict.values()[i]) for i in range(nActors)])
 
     # first = Evo()
     # first.mainLoop(worker.fitnessCheck)
@@ -519,4 +495,4 @@ if __name__ == '__main__':
 #         process.join()
 #
 #     print('That took {} seconds'.format(time.time() - starttime))
-#     print([len(return_dict[i]) for i in return_dict])
+    # print([len(return_dict[i]) for i in return_dict])

@@ -18,7 +18,7 @@ modify game class to hold top card from draw pile with maybe a modifier to speci
 if fitness function becomes time consuming enough: staged fitness calls. rough then more precise
 
 
-I could memorze validMoves for every possible card combination before hand and just pull them up as necesarry
+I could memonize validMoves for every possible card combination before hand and just pull them up as necesarry
 
 when removing cards from hand maybe I could keep track of the index as I loop through and delete the index of the chosen card
   this should be faster than using remvoe

@@ -1,21 +1,23 @@
 import main
 import math
-import deque
+from collections import deque
 import random
 
 def worker(gameLoop, parameters, CardClass, DrawPileClass, DiscardPileClass, GameClass, PlayerClass, return_dict, itNum):
+    nGames = 1000
     playerInst = PlayerClass(True)
     bot = PlayerClass()
-    playerInst.all_append(bot)
+    bot.parameters = parameters
+    playerInst.all_.append(bot)
     playerInst.bot = bot
     p2 = PlayerClass()
-    playerInst.all_append(p2)
+    playerInst.all_.append(p2)
     p3 = PlayerClass()
-    playerInst.all_append(p3)
+    playerInst.all_.append(p3)
     p4 = PlayerClass()
-    playerInst.all_append(p4)
+    playerInst.all_.append(p4)
 
-    nPlayers = len(bot.all_)
+    nPlayers = len(playerInst.all_)
     gameInst = GameClass()
     gameInst.nPlayers = nPlayers
     cardInst = CardClass('', 0, 0, True, True)
@@ -25,8 +27,7 @@ def worker(gameLoop, parameters, CardClass, DrawPileClass, DiscardPileClass, Gam
     discardPileInst = DiscardPileClass()
     drawPileInst = DrawPileClass()
 
-    return_dict[itNum] = gameLoop(parameters, cardInst, discardPileInst, drawPileInst, gameInst, playerInst)
-
+    return_dict[itNum] = [gameLoop(parameters, cardInst, discardPileInst, drawPileInst, gameInst, playerInst) for i in range(nGames)]
 
 # def multiprocessing_func(procnum, return_dict):
 #     a = [i for i in range(10000)]
