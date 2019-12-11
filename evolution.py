@@ -96,8 +96,8 @@ class Evo:
         self.toolbox.register("select", tools.selTournament, tournsize=3)
 
         # creating our population container
-        # self.toolbox.register("attr_bool", self.zeroFoo)
-        self.toolbox.register("attr_bool", random.randint, -self.parmRange, self.parmRange)
+        self.toolbox.register("attr_bool", self.zeroFoo)
+        # self.toolbox.register("attr_bool", random.randint, -self.parmRange, self.parmRange)
         self.toolbox.register("individual", tools.initRepeat, creator.Individual, self.toolbox.attr_bool, self.nParameters) #initReapeat calsl the function container with a generator function corresponding to the calling n times the function .
         self.toolbox.register("population", tools.initRepeat, list, self.toolbox.individual) #create a population contains unfixed amount of individuals
 
@@ -134,7 +134,7 @@ class Evo:
 
             # self.gausMutation(offspring)
             # self.zeroMutation(offspring)
-            self.comboMutation(offspring)
+            # self.comboMutation(offspring)
 
 
             invalid_ind = [ind for ind in offspring if not ind.fitness.valid]  #the invalid marking saves processing resources
@@ -201,8 +201,8 @@ class Evo:
                 self.toolbox.zeroMutate(mutant)
                 del mutant.fitness.values
 
-    def gausMutation(self, offspring):
-        for mutant in offspring:
+    def gausMutation(self, offspring): #change mu & sigma to be related tp how far the parameter is from zero
+        for mutant in offspring:    #also sigma should decrease with iteration numnber
             if random.random() < self.MUTPB:
                 self.toolbox.gausMutate(mutant)
                 del mutant.fitness.values
