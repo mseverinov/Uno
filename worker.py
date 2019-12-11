@@ -3,6 +3,7 @@ import math
 from collections import deque
 import random
 
+<<<<<<< HEAD
 def worker(gameLoop, parameters, CardClass, DrawPileClass, DiscardPileClass, GameClass, PlayerClass, return_dict, itNum):
     nGames = 1000
     playerInst = PlayerClass(True)
@@ -23,6 +24,11 @@ def worker(gameLoop, parameters, CardClass, DrawPileClass, DiscardPileClass, Gam
     cardInst = CardClass('', 0, 0, True, True)
     cardInst.createCards()
     gameInst.decks = gameInst.deckGen(cardInst)
+=======
+
+def fitnessCheck(parameters, nGames, return_dict):
+    return_dict[parameters] = sum([gameLoop(parameters) for i in range(nGames)])
+>>>>>>> 9bef32c93d48e5e1068f25ceea464158883bdded
 
     discardPileInst = DiscardPileClass()
     drawPileInst = DrawPileClass()
