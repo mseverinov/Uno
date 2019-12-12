@@ -96,8 +96,8 @@ class Evo:
         self.toolbox.register("select", tools.selTournament, tournsize=3)
 
         # creating our population container
-        self.toolbox.register("attr_bool", self.zeroFoo)
-        # self.toolbox.register("attr_bool", random.randint, -self.parmRange, self.parmRange)
+        # self.toolbox.register("attr_bool", self.zeroFoo)
+        self.toolbox.register("attr_bool", random.randint, -self.parmRange, self.parmRange)
         self.toolbox.register("individual", tools.initRepeat, creator.Individual, self.toolbox.attr_bool, self.nParameters) #initReapeat calsl the function container with a generator function corresponding to the calling n times the function .
         self.toolbox.register("population", tools.initRepeat, list, self.toolbox.individual) #create a population contains unfixed amount of individuals
 

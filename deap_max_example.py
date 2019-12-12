@@ -1,39 +1,8 @@
 import random
-import array
 
-import numpy
-
-from deap import algorithms
 from deap import base
-from deap import benchmarks
 from deap import creator
 from deap import tools
-
-def setup():
-    #all defined classes part of creator container
-    creator.create("FitnessMax", base.Fitness, weights=(1.0,))
-    creator.create("Individual", array.array, fitness=creator.FitnessMax, strategy=None)
-    creator.create("Strategy", list)
-
-    #toolbox container contains the individual, the population, as well as : functions, operators, and arguements
-    toolbox = base.Toolbox()
-
-    #to add stuff .register() method
-    #to remove stuff .unregister() method
-    #registering stuff to the toolbox freezes their arguements
-        #this can be used to freeze some arguement so we only need to pass the changing ones when calling
-    #the first arguement is the container
-    toolbox.register("attr_bool", random.randint, 10, 99) #creates the generator toolbox.attr_bool() it is composed of the randint() function with arguements frozen to 0 & 1
-    toolbox.register("individual", tools.initRepeat, creator.Individual, toolbox.attr_bool, 100) #creates an individual that has had the initReap method applied to it 100 times
-    toolbox.register("population", tools.initRepeat, list, toolbox.individual) #create a population contains unfixed amount of individuals
-
-    #the operators required for our evolution
-    toolbox.register("evaluate", evalOneMax)
-    toolbox.register("mate", tools.cxTwoPoint)
-    toolbox.register("mutate", tools.mutFlipBit, indpb=0.05)
-    toolbox.register("select", tools.selTournament, tournsize=3)
-
-    return toolbox
 
 #evaluation operator
 def evalOneMax(individual):
@@ -45,6 +14,7 @@ def main():
 
     fitnesses = list(map(toolbox.evaluate, pop)) # Evaluates the entire population
     for ind, fit in zip(pop, fitnesses):
+        print(ind)
         fit = [fit]
         # print(ind.fitness.values, fit)
         ind.fitness.values = fit #used the fitness attribute we created earlier, assignes the generated fit value to it
@@ -84,10 +54,8 @@ def main():
             ind.fitness.values = [fit]
 
         pop[:] = offspring #replace old population with new population
-        stats(pop)
 
-
-def stats(pop):
+        # Gather all the fitnesses in one list and print the stats
         fits = [ind.fitness.values[0] for ind in pop]
 
         length = len(pop)
@@ -101,5 +69,30 @@ def stats(pop):
         print("  Std %s" % std)
 
 
-toolbox = setup()
+
+
+
+
+#all defined classes part of creator container
+creator.create("FitnessMax", base.Fitness, weights=(1.0,))
+creator.create("Individual", list, fitness=creator.FitnessMax)
+
+#toolbox container contains the individual, the population, as well as : functions, operators, and arguements
+toolbox = base.Toolbox()
+
+#to add stuff .register() method
+#to remove stuff .unregister() method
+#registering stuff to the toolbox freezes their arguements
+    #this can be used to freeze some arguement so we only need to pass the changing ones when calling
+#the first arguement is the container
+toolbox.register("attr_bool", random.randint, 0, 1) #creates the generator toolbox.attr_bool() it is composed of the randint() function with arguements frozen to 0 & 1
+toolbox.register("individual", tools.initRepeat, creator.Individual,toolbox.attr_bool, 100) #creates an individual that has had the initReap method applied to it 100 times
+toolbox.register("population", tools.initRepeat, list, toolbox.individual) #create a population contains unfixed amount of individuals
+
+#the operators required for our evolution
+toolbox.register("evaluate", evalOneMax)
+toolbox.register("mate", tools.cxTwoPoint)
+toolbox.register("mutate", tools.mutFlipBit, indpb=0.05)
+toolbox.register("select", tools.selTournament, tournsize=3)
+
 main()
