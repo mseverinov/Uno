@@ -7,12 +7,12 @@ from deap import creator
 from deap import tools
 
 class Evo:
-    nActors = 100
+    nActors = 10
     itLowerLimit = 5
     thresholdValue = 1
     thresholdLength = 15
     nParameters = 49
-    nGames = 500
+    nGames = 50
     parmRange = 100
     nKeep = 2
     #THOUGHTS IDEAS ECT
@@ -114,12 +114,15 @@ class Evo:
         # self.actors = self.createRandActors(self.nActors)
 
         population = self.toolbox.population(n=self.nActors)
-        fitnesses = list(map(self.toolbox.evaluate, population))  # Evaluates the entire population
-        for ind, fit in zip(population, fitnesses):
-            fit = [fit]
-            ind.fitness.values = fit
+        # fitnesses = list(map(self.toolbox.evaluate, population))  # Evaluates the entire population
+        # for ind, fit in zip(population, fitnesses):
+        #     fit = [fit]
+        #     ind.fitness.values = fit
+        #
+        # fits = [ind.fitness.values[0] for ind in population]
 
-        fits = [ind.fitness.values[0] for ind in population]
+        for ind in population:
+            ind.fitness.values = [self.toolbox.evaluate(ind)]
 
         while continueCond:
             print('it:', iteration, 'time:', int(end-start))
@@ -134,13 +137,12 @@ class Evo:
 
             # self.gausMutation(offspring)
             # self.zeroMutation(offspring)
-            # self.comboMutation(offspring)
+            self.comboMutation(offspring)
 
 
             invalid_ind = [ind for ind in offspring if not ind.fitness.valid]  #the invalid marking saves processing resources
-            fitnesses = map(self.toolbox.evaluate, invalid_ind) # Evaluate the individuals with an invalid fitness
-            for ind, fit in zip(invalid_ind, fitnesses):
-                ind.fitness.values = [fit]
+            for ind in invalid_ind:
+                ind.fitness.values = [self.toolbox.evaluate(ind)]
 
             population[:] = offspring  # replace old population with new population
 
@@ -148,29 +150,7 @@ class Evo:
             self.calcStats(population, fits)
             print()
             end = time.time()
-            # tools.selWorst(individuals, k, fit_attr='fitness')
-
-            # avg, quartAvg, halfAvg, cumAvg = self.calcStats(fitPairs)
-            # actorHistoryN = {}
-            # for pair in fitPairs[:nActors//nKeep]:
-            #     tActor = tuple(pair[0])
-            #     if tActor in actorHistory:
-            #         actorHistoryN[tActor] = (pair[1] + actorHistory[tActor][0], nGames + actorHistory[tActor][1])
-            #     else:
-            #         actorHistoryN[tActor] = (pair[1], nGames)
-            # actorHistory = actorHistoryN
-            # if self.nActors//4 > 20:
-            #     step = (self.nActors//4)//20
-            # else:
-            #     step = 1
-            # # avgActor = [sum([fitPairs[i][0][j] for i in range(nActors//nKeep//2)])/(nActors/nKeep/2) for j in range(nParameters)]
-            # # avgActorHist.append(avgActor)
-            # # print([top[0]])
-            # # print([sum([avgActorHist[i][j] for i in range(len(avgActorHist))])//len(avgActorHist) for j in range(nParameters)])
-            # top = [fitPairs[i][0] for i in range(self.nActors//2)]
-            # if self.endCheck(iteration):
-            #     return top[0]
-
+        #     # tools.selWorst(individuals, k, fit_attr='fitness')
 
     def calcStats(self, population, fits):
             length = len(population)
@@ -182,18 +162,6 @@ class Evo:
             print("  Max %s" % max(fits))
             print("  Avg %s" % mean)
             print("  Std %s" % std)
-    #     top = [fitPairs[i][0] for i in range(self.nActors//self.nKeep)]
-    #     avg = sum([fitPairs[i][1] for i in range(self.nActors//self.nKeep//2)])/(self.nGames*self.nActors/self.nKeep/2/4)
-    #     self.fitHist.append(avg)
-    #
-    #     cumAvg = sum(self.fitHist)/len(self.fitHist)
-    #     half = self.fitHist[len(self.fitHist)//2:]
-    #     halfAvg = sum(half)/(len(half))
-    #     quart = self.fitHist[len(self.fitHist)//4:]
-    #     quartAvg = sum(quart)/(len(quart))
-    #
-    #     return avg, quartAvg, halfAvg, cumAvg
-            # print([fitPairs[i][1] for i in range(0, self.nActors//4, step)], avg, str(quartAvg), str(halfAvg), str(cumAvg)
 
     def zeroMutation(self, offspring):
         for mutant in offspring:
@@ -222,16 +190,8 @@ class Evo:
                 del child1.fitness.values
                 del child2.fitness.values
 
-
-    # def endCheck(self,iteration):
-    #     if iteration > self.itLowerLimit:
-    #         return True
-    #     else:
-    #         return False
-
-            # if runningAvg > fitAvgMax + thresholdValue:
-            #     fitAvgMax = runningAvg
-            #     improvIndex = iteration
-            #
-            # if iteration - improvIndex > thresholdLength:
-            #     return top[0]
+    # def testeval(self):
+    #     fitnesses = list(map(self.toolbox.evaluate, population))  # Evaluates the entire population
+    #     for ind, fit in zip(population, fitnesses):
+    #         fit = [fit]
+    #         ind.fitness.values = fit
