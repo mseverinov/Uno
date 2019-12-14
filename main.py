@@ -6,8 +6,8 @@ import math
 
 from evolution import Evo
 
-import multiprocessing
-import worker
+# import multiprocessing
+# import worker
 #ACTION ITEMS
 #general code improvements.
     #memoization repeatedly used results
@@ -30,15 +30,14 @@ class ErrorChecking:
             for n, player in enumerate(Player.all_):
                 cls.output += 'P' + str(n+1) + ' ' + str(len(player.hand)) + '\t'
             cls.output += '\n'
-        # print('player ' + str(Game.currentPlayer))
 
 class Player:
     """Base class for player operations"""
 
-    def fitness(self, card, myHandSize, nextHandSize, prevHandSize):
+    def fitness(self, card, myHandSize, nextHandSize, prevHandSize, parameters):
         #potentially incorperate state history
         h = 0
-        p = self.parameters
+        p = parameters
         if card.value in {0,1,2,3,4,5,6,7,8,9}:
             h += p[0] + myHandSize*p[7] + nextHandSize*p[14] + prevHandSize*p[21] + 1/myHandSize*p[28] + 1/nextHandSize*p[35] + 1/prevHandSize*p[42]
         elif card.value == 'reverse':
@@ -79,26 +78,6 @@ class Player:
             if other != self:
                 self.playerPDist[other] = self.drawPDist.copy()
 
-
-    # def genValidMoves(self):
-    #     """Returns list of cards that match color or value of drawpile.
-    #     Wilds are always added.
-    #
-    #     validMoves := list[CardInstance,...]"""
-    #     return [card for card in self.hand if card.color == 'wild' or card.color == Game.currentColor or card.value == Game.currentValue]
-
-
-    # def genValidMoves(self, gen = True):
-    #     """Returns list of cards that match color or value of drawpile.
-    #     Wilds are always added.
-    #
-    #     validMoves := list[CardInstance,...]"""
-    #     if gen == True:
-    #         return (card for card in self.hand if card.color == 'wild' or card.color == Game.currentColor or card.value == Game.currentValue)
-    #     else:
-    #         return [card for card in self.hand if card.color == 'wild' or card.color == Game.currentColor or card.value == Game.currentValue]
-
-
     def chooseColor(self):
         """Finds most commom color in hand that is not "wild." """
         #Currently basic af. Needs to be updated be improved, but is not a priority for a while.
@@ -120,13 +99,6 @@ class Player:
             return random.choice(['yellow', 'red', 'blue', 'green'])
         return mostCommon
 
-    # def drawdeque(self):
-    #     """Draws a card from the draw pile."""
-    #     #add probability distribution updates here
-    #     card = DrawPile.draw()
-    #     if card != Card.badCard:
-    #         self.hand.appendleft(card)
-
     def draw(self, cardInst, discardPileInst, drawPileInst):
         """Draws a card from the draw pile."""
         #add probability distribution updates here
@@ -145,16 +117,6 @@ class Player:
         #     ErrorChecking.output += Game.currentColor +' '+ str(Game.currentValue) +' '+ 'Player ' + str(Game.currentPlayer) + str(Player.all_[Game.currentPlayer].hand) + '\n'
         return cardInst.badCard
 
-    # def chooseRand(self):
-    #     "Chooses a card to play from hand."
-    #     #insert foward searching here
-    #     validMoves = self.genValidMoves()
-    #     if validMoves == []:
-    #         return False
-    #     card = validMoves[0]
-    #     self.hand.remove(card)
-    #     return card
-
     def chooseWFitness(self, cardInst, gameInst, playerInst):
         #what if valid moves for each potential card combination are memorized
         tF = -math.inf
@@ -164,7 +126,7 @@ class Player:
         prevHandSize = len(playerInst.all_[(gameInst.currentPlayer - gameInst.direction) % gameInst.nPlayers].hand)
         for card in self.hand:
             if card.color == 'wild' or card.color == gameInst.currentColor or card.value == gameInst.currentValue:
-                f = self.fitness(card, myHandSize, nextHandSize, prevHandSize)
+                f = self.fitness(card, myHandSize, nextHandSize, prevHandSize, playerInst.parameters)
                 if f > tF:
                     tF = f
                     tC = card
@@ -366,35 +328,24 @@ def gameLoop(parameters, cardInst, discardPileInst, drawPileInst, gameInst, play
     while True:
         # ErrorChecking.handLenRecord()
         gameInst.singlePlay(cardInst, discardPileInst, drawPileInst, gameInst, playerInst)
-
         for player in playerInst.all_: #check length less often? if we take the smalled hand and multiple by four that is the soonest the game can end
             if len(player.hand) == 0:
                 return player == playerInst.bot
 
 
-def fitnessCheck(parameters, nGames):
+def fitnessCheck(parameters, nGames, cardInst, discardPileInst, drawPileInst, gameInst, playerInst):
     # ErrorChecking.iteration += 1
     # if ErrorChecking.iteration % 40 == 0:
     #     print(ErrorChecking.iteration)
-    return sum([gameLoop(parameters) for i in range(nGames)])
+    return sum([gameLoop(parameters, cardInst, discardPileInst, drawPileInst, gameInst, playerInst) for i in range(nGames)])
 
 
 
 if __name__ == '__main__':
     nActors = 100
     evoInst = Evo()
-    parameterSets = evoInst.createRandActors(nActors)
-    manager = multiprocessing.Manager()
-    return_dict = manager.dict()
-    jobs = []
-    for i in range(nActors):
-        p = multiprocessing.Process(target=worker.worker, args=(gameLoop, parameterSets[i], Card, DrawPile, DiscardPile, Game, Player, return_dict, i))
-        jobs.append(p)
-        p.start()
+    evoInst.mainLoop(fitnessCheck, gameLoop, Card, DrawPile, DiscardPile, Game, Player)
 
-    for proc in jobs:
-        proc.join()
-
-    print([sum(return_dict.values()[i]) for i in range(nActors)])
+    # print([sum(return_dict.values()[i]) for i in range(nActors)])
 
 # print(cProfile.run('main()',sort='tottime'))
