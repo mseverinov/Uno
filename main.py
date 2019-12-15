@@ -34,10 +34,14 @@ class ErrorChecking:
 class Player:
     """Base class for player operations"""
 
-    def fitness(self, card, myHandSize, nextHandSize, prevHandSize, parameters):
+    def fitness(self, card, handSizes, colorCounts):
         #potentially incorperate state history
         h = 0
-        p = parameters
+        p = self.strategy
+        myHandSize = handSizes['my']
+        nextHandSize = handSizes['next']
+        prevHandSize = handSizes['prev']
+
         if card.value in {0,1,2,3,4,5,6,7,8,9}:
             h += p[0] + myHandSize*p[7] + nextHandSize*p[14] + prevHandSize*p[21] + 1/myHandSize*p[28] + 1/nextHandSize*p[35] + 1/prevHandSize*p[42]
         elif card.value == 'reverse':
@@ -52,15 +56,27 @@ class Player:
             h += p[5] + myHandSize*p[12] + nextHandSize*p[19] + prevHandSize*p[26] + 1/myHandSize*p[33] + 1/nextHandSize*p[40] + 1/prevHandSize*p[47]
         elif card.value == '+4':
             h += p[6] + myHandSize*p[13] + nextHandSize*p[20] + prevHandSize*p[27] + 1/myHandSize*p[34] + 1/nextHandSize*p[41] + 1/prevHandSize*p[48]
+        if card.color in {'yellow', 'red', 'blue', 'green'}:
+            h += (p[49]*colorCounts[card.color] + p[50]/colorCounts[card.color])*(p[51]*myHandSize + p[52]/myHandSize)
+
         return h
 
-    def __init__(self, container = False):
+    def __init__(self, parameters, container = False):
         """Creates player instance. Adding player to cls.all_"""
         if container:
             self.all_ = []
             self.bot = None
-            self.parameters = None
             self.emptySet = set()
+        else:
+            self.strategy = parameters
+            for p in parameters:
+                if p != 0:
+                    self.chooseCard = self.chooseWFitness
+                    break
+            else:
+                self.chooseCard = self.chooseRand
+
+
 
     def initPDists(self):
         """Initializes probability distributions for drawpile and other players' hands.
@@ -80,8 +96,6 @@ class Player:
 
     def chooseColor(self):
         """Finds most commom color in hand that is not "wild." """
-        #Currently basic af. Needs to be updated be improved, but is not a priority for a while.
-        #May be taken care of by foward searching algorithim.
         counter = {}
         for card in self.hand:
             if card.color not in counter and card.color != 'wild':
@@ -108,7 +122,6 @@ class Player:
 
     def chooseRand(self, cardInst, gameInst, playerInst):
         "Chooses a card to play from hand."
-        #insert foward searching here
         for card in self.hand:
             if card.color == 'wild' or card.color == gameInst.currentColor or card.value == gameInst.currentValue:
                 self.hand.remove(card)
@@ -118,15 +131,17 @@ class Player:
         return cardInst.badCard
 
     def chooseWFitness(self, cardInst, gameInst, playerInst):
-        #what if valid moves for each potential card combination are memorized
         tF = -math.inf
         tC = cardInst.badCard
-        myHandSize = len(self.hand)
-        nextHandSize = len(playerInst.all_[(gameInst.currentPlayer + gameInst.direction) % gameInst.nPlayers].hand)
-        prevHandSize = len(playerInst.all_[(gameInst.currentPlayer - gameInst.direction) % gameInst.nPlayers].hand)
+        handSizes = {}
+        handSizes['my'] = len(self.hand)
+        handSizes['next'] = len(playerInst.all_[(gameInst.currentPlayer + gameInst.direction) % gameInst.nPlayers].hand)
+        handSizes['prev'] = len(playerInst.all_[(gameInst.currentPlayer - gameInst.direction) % gameInst.nPlayers].hand)
+        colors = {card.color for card in self.hand}
+        colorCounts = {color:sum([card.color == color for card in self.hand]) for color in colors}
         for card in self.hand:
             if card.color == 'wild' or card.color == gameInst.currentColor or card.value == gameInst.currentValue:
-                f = self.fitness(card, myHandSize, nextHandSize, prevHandSize, playerInst.parameters)
+                f = self.fitness(card, handSizes, colorCounts)
                 if f > tF:
                     tF = f
                     tC = card
@@ -289,14 +304,10 @@ class Game:
         """Carries out a single play for the next player."""
         #Complete - probability stuff.
         currentPlayer = playerInst.all_[self.currentPlayer]
-        if currentPlayer == playerInst.bot:
-            fitFunction = currentPlayer.chooseWFitness
-        else:
-            fitFunction = currentPlayer.chooseRand
-        card = fitFunction(cardInst, gameInst, playerInst)
+        card = currentPlayer.chooseCard(cardInst, gameInst, playerInst)
         if card == cardInst.badCard:
             currentPlayer.draw(cardInst, discardPileInst, drawPileInst)
-            card = fitFunction(cardInst, gameInst, playerInst)
+            card = currentPlayer.chooseCard(cardInst, gameInst, playerInst)
         if card != cardInst.badCard:
             discardPileInst.add(card)
             if card.color == 'wild':
@@ -344,7 +355,8 @@ def fitnessCheck(parameters, nGames, cardInst, discardPileInst, drawPileInst, ga
 if __name__ == '__main__':
     nActors = 100
     evoInst = Evo()
-    evoInst.mainLoop(fitnessCheck, gameLoop, Card, DrawPile, DiscardPile, Game, Player)
+    classDict = {'Card':Card, 'DrawPile':DrawPile, 'DiscardPile':DiscardPile, 'Game':Game, 'Player':Player}
+    evoInst.mainLoop(fitnessCheck, gameLoop, classDict)
 
     # print([sum(return_dict.values()[i]) for i in range(nActors)])
 

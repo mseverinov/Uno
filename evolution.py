@@ -4,6 +4,7 @@ from collections import deque
 from deap import base
 from deap import creator
 from deap import tools
+from deap import algorithms
 
 import multiprocessing
 import worker
@@ -56,28 +57,29 @@ import numpy
 class Evo:
 
     def __init__(self):
-        self.nActors = 50
-        self.nParameters = 49
-        self.nGames = 400
-        self.nGen = 200
+        self.nActors = 100
+        self.nParameters = 53
+        self.nGames = 1000
+        self.nGen = 100
         self.parmRange = 10
+        self.fInterval = 120
 
     def deapSetup(self, fitnessCheck):
         # deap class creation
         creator.create("FitnessMax", base.Fitness, weights=(1.0,))
-        creator.create("Individual", list, fitness=creator.FitnessMax)
+        creator.create("Individual", list, fitness=creator.FitnessMax, statFit=None)
 
         self.toolbox = base.Toolbox() #toolbox container contains the individual, the population, as well as : functions, operators, and arguements
         self.toolbox.register("evaluate", fitnessCheck, self.nGames)
         self.toolbox.register("mate", tools.cxTwoPoint)
         self.toolbox.register("zeroMutate", tools.mutFlipBit, indpb=0.05)
-        self.toolbox.register("gausMutate", tools.mutGaussian, mu=0, sigma=.5, indpb=0.05)
+        self.toolbox.register("gausMutate", tools.mutGaussian, mu=0, sigma=.5, indpb=0.5)
         self.toolbox.register("select", tools.selTournament, tournsize=3)
 
         # creating our population container
         # self.toolbox.register("attr_bool", self.zeroFoo)
-        self.toolbox.register("attr_bool", random.randint, -self.parmRange, self.parmRange)
-        self.toolbox.register("individual", tools.initRepeat, creator.Individual, self.toolbox.attr_bool, self.nParameters) #initReapeat calsl the function container with a generator function corresponding to the calling n times the function .
+        self.toolbox.register("attr", random.randint, -self.parmRange, self.parmRange)
+        self.toolbox.register("individual", self.initES, creator.Individual, self.toolbox.attr, self.nParameters) #initReapeat calsl the function container with a generator function corresponding to the calling n times the function .
         self.toolbox.register("population", tools.initRepeat, list, self.toolbox.individual) #create a population contains unfixed amount of individuals
 
         self.pool = multiprocessing.Pool()
@@ -85,13 +87,13 @@ class Evo:
 
         # CXPB  is the probability with which two individuals are crossed
         # MUTPB is the probability for mutating an individual
-        self.CXPB, self.MUTPB = 0.5, 0.2
+        self.CXPB, self.MUTPB = 0.1, 0.2
 
         # Objects that will compile the data
         self.fbest = numpy.ndarray((self.nGen, ))
         self.std = numpy.ndarray((self.nGen, self.nParameters))
 
-    def mainLoop(self, fitnessCheck, gameLoop, Cardclass, DrawPileclass, DiscardPileclass, Gameclass, Playerclass):
+    def mainLoop(self, fitnessCheck, gameLoop, classDict):
         start = 0
         end = 0
         self.iteration = -1
@@ -102,39 +104,47 @@ class Evo:
         stats.register("min", numpy.min)
         stats.register("max", numpy.max)
 
-        halloffame = tools.HallOfFame(1)
+        halloffame = tools.HallOfFame(self.nActors)
         self.logbook = tools.Logbook()
         self.logbook.header = "gen", "evals", "std", "min", "avg", "max"
         self.deapSetup(fitnessCheck)
 
         population = self.toolbox.population(n=self.nActors)
         fStart = time.time()
-        self.poolfoo(population, fitnessCheck, Cardclass, DrawPileclass, DiscardPileclass, Gameclass, Playerclass)
+        fits = self.poolfoo(population, fitnessCheck, classDict)
         fEnd = time.time()
         self.fInterval = fEnd-fStart
+        # statFits = self.poolfoo(population, fitnessCheck, classDict, True)
+        for i in range(len(population)):
+            population[i].fitness.values = [fits[i]]
+            # population[i].statFit = statFits[i]
+        halloffame.update(population)
+
 
         for i in range(self.nGen):
             self.iteration += 1
             start = time.time()
-
-            # tournament selection used in this method removes lower fitness individuals
-            offspring = self.toolbox.select(population, len(population))  # selects top individual from 3 randomly chosen with replacemnt, as many times as there are members in the population
+            # offspring = self.toolbox.select(population, len(population))  # selects top individual from 3 randomly chosen with replacemnt, as many times as there are members in the population
+            offspring = self.toolbox.select(halloffame, self.nActors)  # selects top individual from 3 randomly chosen with replacemnt, as many times as there are members in the population
             offspring = list(map(self.toolbox.clone, offspring))  # Clone creates a copy of each individual so our new list does not reference the prior generation of individuals
 
-            # self.crossBreed(offspring)
-
-            self.gausMutation(offspring)
+            # self.gausMutation(offspring)
             # self.zeroMutation(offspring)
-            # self.comboMutation(offspring)
+            self.comboMutation(offspring)
+            self.crossBreed(offspring)
 
-            invalid_ind = [ind for ind in offspring if not ind.fitness.valid]  #the invalid marking saves processing resources
-            self.poolfoo(invalid_ind, fitnessCheck, Cardclass, DrawPileclass, DiscardPileclass, Gameclass, Playerclass)
+            invalid_ind = [ind for ind in offspring if not ind.fitness.valid]
+            fits = self.poolfoo(invalid_ind, fitnessCheck, classDict)
+            # statFits = self.poolfoo(invalid_ind, fitnessCheck, classDict, True)
+            for i in range(len(invalid_ind)):
+                invalid_ind[i].fitness.values = [fits[i]]
+                # invalid_ind[i].statFit = statFits[i]
+
             population[:] = offspring  # replace old population with new population
-
             halloffame.update(population)
             record = stats.compile(population)
             self.logbook.record(evals=len(population), gen=self.iteration, **record)
-            self.fbest[self.iteration] = halloffame[0].fitness.values[0]
+            # self.fbest[self.iteration] = halloffame[0].fitness.values[0]
             self.std[self.iteration] = numpy.std(population)
 
             end = time.time()
@@ -144,12 +154,12 @@ class Evo:
         self.plotstuff()
 
     def calcStats(self, population):
+        # fits = [ind.statFit for ind in population]
         fits = [ind.fitness.values[0] for ind in population]
         length = len(population)
         mean = sum(fits) / length
         sum2 = sum(x*x for x in fits)
         std = abs(sum2 / length - mean**2)**0.5
-
         print("  Min %s" % min(fits))
         print("  Max %s" % max(fits))
         print("  Avg %s" % mean)
@@ -181,47 +191,30 @@ class Evo:
                 del child1.fitness.values
                 del child2.fitness.values
 
-    def poolfoo(self, population, fitnessCheck, Cardclass, DrawPileclass, DiscardPileclass, Gameclass, Playerclass):
-        # return_dict = manager.dict()
-        # it = [(fitnessCheck, list(population[i]), self.nGames, Cardclass, DrawPileclass, DiscardPileclass, Gameclass, Playerclass, return_dict, i) for i in range(len(population))]
-        # self.toolbox.starmap(worker.worker, it)
-        # for i in range(len(population)):
-        #     population[i].fitness.values = [return_dict[i]]
-        it = [(fitnessCheck, list(population[i]), self.nGames, Cardclass, DrawPileclass, DiscardPileclass, Gameclass, Playerclass) for i in range(len(population))]
+    def poolfoo(self, population, fitnessCheck, classDict, evoStrat = True):
+        if not evoStrat:
+            argIt = []
+            for i in range(len(population)):
+                parameters = [[list(population[i])] + [list(ind) for ind in self.toolbox.select(population, 3)]]
+                argIt.append((fitnessCheck, parameters, self.nGames, classDict))
+        else:
+            argIt = [(fitnessCheck, [list(population[i])] + [[0 for _ in range(self.nParameters)] for _ in range(3)], self.nGames, classDict) for i in range(len(population))]
         try:
-            fits = self.toolbox.starmap_async(worker.worker, it).get(timeout=self.fInterval)
+            fits = self.toolbox.starmap_async(worker.worker, argIt).get(timeout=self.fInterval)
+        except multiprocessing.TimeoutError:
+            fits = self.toolbox.starmap_async(worker.worker, argIt).get(timeout=self.fInterval)
         except:
-            fits = self.toolbox.starmap_async(worker.worker, it).get(timeout=self.fInterval)
-        # self.toolbox.poolclose()
-        # self.toolbox.pooljoin()
-        for i in range(len(population)):
-            population[i].fitness.values = [fits[i]]
-
-
-
-    def processfoo(self, manager, population, fitnessCheck, Cardclass, DrawPileclass, DiscardPileclass, Gameclass, Playerclass):
-        return_dict = manager.dict()
-        jobs = []
-        for i in range(len(population)):
-            p = self.toolbox.process(target=worker.worker, args=(fitnessCheck, population[i], Cardclass, DrawPileclass, DiscardPileclass, Gameclass, Playerclass, return_dict, i))
-            jobs.append(p)
-            p.start()
-
-        for proc in jobs:
-            proc.join()
-
-        for i in range(len(population)):
-            population[i].fitness.values = [return_dict[i]]
+            raise
+        return fits
 
     def plotstuff(self):
         x = list(range(self.nGen))
         avg, max_, min_ = self.logbook.select("avg", "max", "min")
         plt.figure()
         plt.subplot(1, 2, 1)
-        plt.semilogy(x, avg, "-b")
+        plt.semilogy(x, avg, "--b")
         plt.semilogy(x, max_, "-r")
-        plt.semilogy(x, min_, "--b")
-        # plt.semilogy(x, self.fbest, "-c")
+        plt.semilogy(x, min_, "-r")
         plt.grid(True)
         plt.title("blue: f-values, green: sigma, red: axis ratio")
 
@@ -235,3 +228,8 @@ class Evo:
         plt.grid(True)
         plt.title("Standard Deviations in All Coordinates")
         plt.show()
+
+    def initES(self, icls, func, size):
+        ind = icls(random.randint(-self.parmRange, self.parmRange) for _ in range(size))
+        ind.fStat = 0
+        return ind

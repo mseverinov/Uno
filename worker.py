@@ -3,20 +3,24 @@ import math
 from collections import deque
 import random
 
-def worker(fitnessCheck, parameters, nGames, CardClass, DrawPileClass, DiscardPileClass, GameClass, PlayerClass):
-    playerInst = PlayerClass(True)
-    bot = PlayerClass()
+def worker(fitnessCheck, parameters, nGames, classDict):
+    CardClass = classDict['Card']
+    DrawPileClass = classDict['DrawPile']
+    DiscardPileClass = classDict['DiscardPile']
+    PlayerClass = classDict['Player']
+    playerInst = PlayerClass(None, True)
+    bot = PlayerClass(parameters[0])
     playerInst.all_.append(bot)
     playerInst.bot = bot
-    p2 = PlayerClass()
+    p2 = PlayerClass(parameters[1])
     playerInst.all_.append(p2)
-    p3 = PlayerClass()
+    p3 = PlayerClass(parameters[2])
     playerInst.all_.append(p3)
-    p4 = PlayerClass()
+    p4 = PlayerClass(parameters[3])
     playerInst.all_.append(p4)
 
     nPlayers = len(playerInst.all_)
-    gameInst = GameClass()
+    gameInst = classDict['Game']()
     gameInst.nPlayers = nPlayers
     cardInst = CardClass('', 0, 0, True, True)
     cardInst.createCards()
