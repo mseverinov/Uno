@@ -12,13 +12,11 @@ import worker
 import matplotlib.pyplot as plt
 
 import numpy
+#graph individual parameters
+#strategy evolution
+#similarity function
 
     #THOUGHTS IDEAS ECT
-        #better actors make more children?
-        #add mutation rate?
-        #lock parameters which have equilibriated
-        #perhaps unlock and relock over time
-        #clustering algorithim
         #rather than having a coefficient for all possible functional forms, randomize the choice of functional
             #only cross breed species with matching functional forms
             #mutuate children from loners
@@ -29,19 +27,6 @@ import numpy
         #visualize what the w/l ratio of a single parameter set is across generations. is it consistent? how much so?
         #simultaniuis side evolution to improve accuracy of improvement
         #probabilistic fitness matching for cross breeding
-
-    #Priority 1
-        #SPEED UP UNO GAME SIMULATION!!
-            #create list/set of valid moves for every card at the beginning of simulation
-            #Potential Solution 1: Vectorize
-                #use numpy to multiply binary vectors to find crossover
-                #this will require significantly longer lists. Will the speed up overcome this?
-            #Potential Solution 2
-                #Use set comparision to do the same thing
-                #which cards in hand are in set that contains all valid move for the card on top of the discard pile
-
-    #Priority 2
-        #rewrite current evolution algorithim using DEAP library
 
     #Priority 3
         #implement randomization of node function,
@@ -56,13 +41,27 @@ import numpy
 
 class Evo:
 
-    def __init__(self):
-        self.nActors = 100
+    def __init__(self, nActors = 0, nGames = 0, sigma = 0, complexity = None):
+        if nActors != 0:
+            self.nActors = nActors
+        else:
+            self.nActors = 50
+        if nGames != 0:
+            self.nGames = nGames
+        else:
+            self.nGames = 1000
+        if sigma != 0:
+            self.sigma = sigma
+        else:
+            self.sigma = .5
+        if complexity != None:
+            self.complexity = complexity
+        else:
+            self.complexity = {'bot hand only':False, 'positive only':False, 'direct only':False, 'color':True}
         self.nParameters = 53
-        self.nGames = 1000
-        self.nGen = 100
+        self.nGen = 25
         self.parmRange = 10
-        self.fInterval = 120
+        self.fInterval = self.nGames*self.nActors/1
 
     def deapSetup(self, fitnessCheck):
         # deap class creation
@@ -72,8 +71,8 @@ class Evo:
         self.toolbox = base.Toolbox() #toolbox container contains the individual, the population, as well as : functions, operators, and arguements
         self.toolbox.register("evaluate", fitnessCheck, self.nGames)
         self.toolbox.register("mate", tools.cxTwoPoint)
-        self.toolbox.register("zeroMutate", tools.mutFlipBit, indpb=0.05)
-        self.toolbox.register("gausMutate", tools.mutGaussian, mu=0, sigma=.5, indpb=0.5)
+        self.toolbox.register("zeroMutate", tools.mutFlipBit, indpb=0.025)
+        self.toolbox.register("gausMutate", tools.mutGaussian, mu=0, sigma=self.sigma, indpb=0.1)
         self.toolbox.register("select", tools.selTournament, tournsize=3)
 
         # creating our population container
@@ -84,6 +83,7 @@ class Evo:
 
         self.pool = multiprocessing.Pool()
         self.toolbox.register("starmap_async", self.pool.starmap_async)
+        self.toolbox.register('poolclose', self.pool.close)
 
         # CXPB  is the probability with which two individuals are crossed
         # MUTPB is the probability for mutating an individual
@@ -93,39 +93,47 @@ class Evo:
         self.fbest = numpy.ndarray((self.nGen, ))
         self.std = numpy.ndarray((self.nGen, self.nParameters))
 
-    def mainLoop(self, fitnessCheck, gameLoop, classDict):
+        self.stats = tools.Statistics(lambda ind: ind.fitness.values)
+        self.stats.register("avg", numpy.mean)
+        self.stats.register("std", numpy.std)
+        self.stats.register("min", numpy.min)
+        self.stats.register("max", numpy.max)
+
+        self.halloffame = tools.HallOfFame(self.nActors)
+        self.logbook = tools.Logbook()
+        self.logbook.header = "gen", "evals", "std", "min", "avg", "max"
+
+    def mainLoop(self, fitnessCheck, gameLoop, classDict, recordHistorys):
+        self.deapSetup(fitnessCheck)
+
         start = 0
         end = 0
         self.iteration = -1
-
-        stats = tools.Statistics(lambda ind: ind.fitness.values)
-        stats.register("avg", numpy.mean)
-        stats.register("std", numpy.std)
-        stats.register("min", numpy.min)
-        stats.register("max", numpy.max)
-
-        halloffame = tools.HallOfFame(self.nActors)
-        self.logbook = tools.Logbook()
-        self.logbook.header = "gen", "evals", "std", "min", "avg", "max"
-        self.deapSetup(fitnessCheck)
 
         population = self.toolbox.population(n=self.nActors)
         fStart = time.time()
         fits = self.poolfoo(population, fitnessCheck, classDict)
         fEnd = time.time()
-        self.fInterval = fEnd-fStart
+
+
+        # if fEnd-fStart < 60:
+        #     self.fInterval = fEnd-fStart
+        # else:
+        #     print('problem')
+        # print(self.fInterval, time.ctime(time.time()))
         # statFits = self.poolfoo(population, fitnessCheck, classDict, True)
+
         for i in range(len(population)):
             population[i].fitness.values = [fits[i]]
             # population[i].statFit = statFits[i]
-        halloffame.update(population)
-
+        self.halloffame.update(population)
+        if recordHistorys: genHistory = [numpy.average(numpy.array([ind for ind in population]), axis=0)]
 
         for i in range(self.nGen):
             self.iteration += 1
             start = time.time()
             # offspring = self.toolbox.select(population, len(population))  # selects top individual from 3 randomly chosen with replacemnt, as many times as there are members in the population
-            offspring = self.toolbox.select(halloffame, self.nActors)  # selects top individual from 3 randomly chosen with replacemnt, as many times as there are members in the population
+            offspring = self.toolbox.select(self.halloffame, self.nActors)  # selects top individual from 3 randomly chosen with replacemnt, as many times as there are members in the population
             offspring = list(map(self.toolbox.clone, offspring))  # Clone creates a copy of each individual so our new list does not reference the prior generation of individuals
 
             # self.gausMutation(offspring)
@@ -141,17 +149,25 @@ class Evo:
                 # invalid_ind[i].statFit = statFits[i]
 
             population[:] = offspring  # replace old population with new population
-            halloffame.update(population)
-            record = stats.compile(population)
+            self.halloffame.update(population)
+            record = self.stats.compile(population)
             self.logbook.record(evals=len(population), gen=self.iteration, **record)
             # self.fbest[self.iteration] = halloffame[0].fitness.values[0]
             self.std[self.iteration] = numpy.std(population)
-
             end = time.time()
-            print('it:', self.iteration, 'time:', int(end-start))
-            self.calcStats(population)
-            print()
-        self.plotstuff()
+
+            if recordHistorys: genHistories.append(numpy.average(numpy.array([ind for ind in population]), axis=0))
+
+
+            # print('it:', self.iteration, 'time:', int(end-start))
+            # self.calcStats(population)
+            # print()
+        # self.plotstuff()
+        self.toolbox.poolclose()
+
+        if recordHistorys:
+            return self.logbook, genHistories
+        return self.logbook, None
 
     def calcStats(self, population):
         # fits = [ind.statFit for ind in population]
@@ -198,13 +214,14 @@ class Evo:
                 parameters = [[list(population[i])] + [list(ind) for ind in self.toolbox.select(population, 3)]]
                 argIt.append((fitnessCheck, parameters, self.nGames, classDict))
         else:
-            argIt = [(fitnessCheck, [list(population[i])] + [[0 for _ in range(self.nParameters)] for _ in range(3)], self.nGames, classDict) for i in range(len(population))]
-        try:
-            fits = self.toolbox.starmap_async(worker.worker, argIt).get(timeout=self.fInterval)
-        except multiprocessing.TimeoutError:
-            fits = self.toolbox.starmap_async(worker.worker, argIt).get(timeout=self.fInterval)
-        except:
-            raise
+            argIt = [(fitnessCheck, [list(population[i])] + [[0 for _ in range(self.nParameters)] for _ in range(3)], self.nGames, classDict, self.complexity) for i in range(len(population))]
+        condition = True
+        while condition:
+            try:
+                fits = self.toolbox.starmap_async(worker.worker, argIt).get(timeout=self.fInterval)
+                condition = False
+            except multiprocessing.TimeoutError:
+                print('TimedOut')
         return fits
 
     def plotstuff(self):
@@ -230,6 +247,6 @@ class Evo:
         plt.show()
 
     def initES(self, icls, func, size):
-        ind = icls(random.randint(-self.parmRange, self.parmRange) for _ in range(size))
+        ind = icls(random.randint(not(self.complexity['positive only'])*-self.parmRange, self.parmRange) for _ in range(size))
         ind.fStat = 0
         return ind

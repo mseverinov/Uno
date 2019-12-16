@@ -6,6 +6,9 @@ import math
 
 from evolution import Evo
 
+import matplotlib.pyplot as plt
+from matplotlib.ticker import PercentFormatter
+
 # import multiprocessing
 # import worker
 #ACTION ITEMS
@@ -42,32 +45,38 @@ class Player:
         nextHandSize = handSizes['next']
         prevHandSize = handSizes['prev']
 
+        hBool = not(self.complexity['bot hand only'])
+        dBool = not(self.complexity['direct only'])
+        cBool = self.complexity['color']
+
         if card.value in {0,1,2,3,4,5,6,7,8,9}:
-            h += p[0] + myHandSize*p[7] + nextHandSize*p[14] + prevHandSize*p[21] + 1/myHandSize*p[28] + 1/nextHandSize*p[35] + 1/prevHandSize*p[42]
+            h += p[0] + p[7]*myHandSize + nextHandSize*p[14]*hBool + prevHandSize*p[21]*hBool + p[28]/myHandSize*dBool + 1/nextHandSize*p[35]*hBool*dBool* + hBool*dBool*p[42]/prevHandSize
         elif card.value == 'reverse':
-            h += p[1] + myHandSize*p[8] + nextHandSize*p[15] + prevHandSize*p[22] + 1/myHandSize*p[29] + 1/nextHandSize*p[36] + 1/prevHandSize*p[43]
+            h += p[1] + p[8]*myHandSize + nextHandSize*p[15]*hBool + prevHandSize*p[22]*hBool + p[29]/myHandSize*dBool + 1/nextHandSize*p[36]*hBool*dBool + hBool*dBool*p[43]/prevHandSize
         elif card.value == 'stop':
-            h += p[2] + myHandSize*p[9] + nextHandSize*p[16] + prevHandSize*p[23] + 1/myHandSize*p[30] + 1/nextHandSize*p[37] + 1/prevHandSize*p[44]
+            h += p[2] + p[9]*myHandSize + nextHandSize*p[16]*hBool + prevHandSize*p[23]*hBool + p[30]/myHandSize*dBool + 1/nextHandSize*p[37]*hBool*dBool + hBool*dBool*p[44]/prevHandSize
         elif card.value == 'skip':
-            h += p[3] + myHandSize*p[10] + nextHandSize*p[17] + prevHandSize*p[24] + 1/myHandSize*p[31] + 1/nextHandSize*p[38] + 1/prevHandSize*p[45]
+            h += p[3] + p[10]*myHandSize + nextHandSize*p[17]*hBool + prevHandSize*p[24]*hBool + p[31]/myHandSize*dBool + 1/nextHandSize*p[38]*hBool*dBool + hBool*dBool*p[45]/prevHandSize
         elif card.value == '+2':
-            h += p[4] + myHandSize*p[11] + nextHandSize*p[18] + prevHandSize*p[25] + 1/myHandSize*p[32] + 1/nextHandSize*p[39] + 1/prevHandSize*p[46]
+            h += p[4] + p[11]*myHandSize + nextHandSize*p[18]*hBool + prevHandSize*p[25]*hBool + p[32]/myHandSize*dBool + 1/nextHandSize*p[39]*hBool*dBool + hBool*dBool*p[46]/prevHandSize
         elif card.value == 'basic':
-            h += p[5] + myHandSize*p[12] + nextHandSize*p[19] + prevHandSize*p[26] + 1/myHandSize*p[33] + 1/nextHandSize*p[40] + 1/prevHandSize*p[47]
+            h += p[5] + p[12]*myHandSize + nextHandSize*p[19]*hBool + prevHandSize*p[26]*hBool + p[33]/myHandSize*dBool + 1/nextHandSize*p[40]*hBool*dBool + hBool*dBool*p[47]/prevHandSize
         elif card.value == '+4':
-            h += p[6] + myHandSize*p[13] + nextHandSize*p[20] + prevHandSize*p[27] + 1/myHandSize*p[34] + 1/nextHandSize*p[41] + 1/prevHandSize*p[48]
+            h += p[6] + p[13]*myHandSize + nextHandSize*p[20]*hBool + prevHandSize*p[27]*hBool + p[34]/myHandSize*dBool + 1/nextHandSize*p[41]*hBool*dBool + hBool*dBool*p[48]/prevHandSize
         if card.color in {'yellow', 'red', 'blue', 'green'}:
             h += (p[49]*colorCounts[card.color] + p[50]/colorCounts[card.color])*(p[51]*myHandSize + p[52]/myHandSize)
 
         return h
 
-    def __init__(self, parameters, container = False):
+    def __init__(self, parameters, complexity = None, container = False):
         """Creates player instance. Adding player to cls.all_"""
         if container:
             self.all_ = []
             self.bot = None
             self.emptySet = set()
         else:
+            if complexity != None:
+                self.complexity = complexity
             self.strategy = parameters
             for p in parameters:
                 if p != 0:
@@ -350,13 +359,121 @@ def fitnessCheck(parameters, nGames, cardInst, discardPileInst, drawPileInst, ga
     #     print(ErrorChecking.iteration)
     return sum([gameLoop(parameters, cardInst, discardPileInst, drawPileInst, gameInst, playerInst) for i in range(nGames)])
 
+# def plotFoo(checkSlice, interest, )
 
 
 if __name__ == '__main__':
-    nActors = 100
-    evoInst = Evo()
-    classDict = {'Card':Card, 'DrawPile':DrawPile, 'DiscardPile':DiscardPile, 'Game':Game, 'Player':Player}
-    evoInst.mainLoop(fitnessCheck, gameLoop, classDict)
+    recordHistorys = False
+    nActors = [5,50,500]
+    nTestGames = [10,100,1000]
+    mutationRates = [.1, .2, .4, .8, 1.6, 3.2]
+    colors = ['-b',  '-g', '-r', '-c', '-m', '-y', '-k', '-w']
+    complexity = [{'bot hand only':True, 'positive only':True, 'direct only':True, 'color':False},
+                    {'bot hand only':False, 'positive only':True, 'direct only':True, 'color':False},
+                    {'bot hand only':False, 'positive only':False, 'direct only':True, 'color':False},
+                    {'bot hand only':False, 'positive only':False, 'direct only':False, 'color':False},
+                    {'bot hand only':False, 'positive only':False, 'direct only':False, 'color':True}]
+    nRepeats = 32
+    checkPoints = [1,2,4,8,16,32]
+    filePrefix = 'nGames '
+    interest = nTestGames
+    title = 'Games Per Generation (10, 100, 1000)'
+    if True in [isinstance(i, dict) for i in interest]:
+        dictCondition = True
+        logbooks = {tuple([(i,j) for i,j in element.items()]):[] for element in interest}
+    else:
+        dictCondition = False
+        logbooks = {element:[] for element in interest}
+
+    if recordHistorys: allHistories = []
+
+    for nR in range(nRepeats):
+        nR += 1
+        start = time.time()
+
+        if recordHistorys: repeatHistory = {}
+        for element in interest:
+            evoInst = Evo(nGames = element)
+            classDict = {'Card':Card, 'DrawPile':DrawPile, 'DiscardPile':DiscardPile, 'Game':Game, 'Player':Player}
+            logbook, genHistories = evoInst.mainLoop(fitnessCheck, gameLoop, classDict, recordHistorys)
+            a, ma, mi = logbook.select("avg", "max", "min")
+
+            if recordHistorys: repeatHistory[element] = genHistories
+            if dictCondition:
+                logbooks[tuple([(i,j) for i,j in element.items()])].append([[i/nTG for i in a], [i/nTG for i in ma], [i/nTG for i in mi]])
+            else:
+                nTG = 1
+                if interest == nTestGames:
+                    nTG = element
+                logbooks[element].append([[i/nTG for i in a], [i/nTG for i in ma], [i/nTG for i in mi]])
+            end = time.time()
+            print(nR, element, end-start, time.ctime(time.time()))
+        if nR in checkPoints:
+            checkSlice = checkPoints[:checkPoints.index(nR)+1]
+            if dictCondition:
+                avg = {k:{tuple([(a,b) for a,b in n.items()]):[sum([logbooks[tuple([(a,b) for a,b in n.items()])][i][0][j] for i in range(k)])/k for j in range(evoInst.nGen)] for n in interest} for k in checkSlice}
+                max_ = {k:{tuple([(a,b) for a,b in n.items()]):[sum([logbooks[tuple([(a,b) for a,b in n.items()])][i][1][j] for i in range(k)])/k for j in range(evoInst.nGen)] for n in interest} for k in checkSlice}
+                min_ = {k:{tuple([(a,b) for a,b in n.items()]):[sum([logbooks[tuple([(a,b) for a,b in n.items()])][i][2][j] for i in range(k)])/k for j in range(evoInst.nGen)] for n in interest} for k in checkSlice}
+            else:
+                avg = {k:{n:[sum([logbooks[n][i][0][j] for i in range(k)])/k for j in range(evoInst.nGen)] for n in interest} for k in checkSlice}
+                max_ = {k:{n:[sum([logbooks[n][i][1][j] for i in range(k)])/k for j in range(evoInst.nGen)] for n in interest} for k in checkSlice}
+                min_ = {k:{n:[sum([logbooks[n][i][2][j] for i in range(k)])/k for j in range(evoInst.nGen)] for n in interest} for k in checkSlice}
+
+            x = list(range(evoInst.nGen))
+            plt.figure()
+
+            for i,checkpoint in enumerate(checkSlice):
+                ax = plt.subplot(len(checkSlice), 1, i+1)
+                ax.ticklabel_format(style='sci', axis='both', scilimits=(-5,5))
+                plt.yscale('linear')
+                plt.ylabel('Games Won')
+                if interest == nTestGames:
+                    print('triggered')
+                    ax.yaxis.set_major_formatter(PercentFormatter(1))
+                # ax=fig.add_axes
+                if i == 0:
+                    plt.title(title)
+                if i == len(checkSlice) - 1:
+                    plt.xlabel('Generations')
+
+                for n in range(len(interest)):
+                    plt.ylabel('Games Won')
+                    thickness = 1/checkPoints.index(nRepeats)*(checkPoints.index(nRepeats)-checkPoints.index(nR))+.5
+                    if dictCondition:
+                        ax.plot(x, avg[checkpoint][tuple([(a,b) for a,b in interest[n].items()])], '-' + colors[n], linewidth = thickness)
+                        ax.plot(x, max_[checkpoint][tuple([(a,b) for a,b in interest[n].items()])], colors[n], linewidth = thickness)
+                        ax.plot(x, min_[checkpoint][tuple([(a,b) for a,b in interest[n].items()])], colors[n], linewidth = thickness)
+                    else:
+                        ax.plot(x, avg[checkpoint][interest[n]], '-' + colors[n], linewidth = thickness)
+                        ax.plot(x, max_[checkpoint][interest[n]], colors[n], linewidth = thickness)
+                        ax.plot(x, min_[checkpoint][interest[n]], colors[n], linewidth = thickness)
+                    plt.grid(True)
+            filename = filePrefix + str(nR) + 'multi' + '.png'
+            plt.savefig(filename, dpi=300)
+            print("MultiPlot ", str(nR) + ' saved')
+            # plt.show()
+            plt.figure()
+            ax = plt.subplot(1,1,1)
+            plt.ylabel('Games Won')
+            plt.title(title)
+            plt.xlabel('Generations')
+            if interest == nTestGames:
+                print('triggered')
+                ax.yaxis.set_major_formatter(PercentFormatter(1))
+            for n in range(len(interest)):
+                if dictCondition:
+                    ax.plot(x, avg[checkpoint][tuple([(a,b) for a,b in interest[n].items()])], '-' + colors[n], linewidth = 1)
+                    ax.plot(x, max_[checkpoint][tuple([(a,b) for a,b in interest[n].items()])], colors[n], linewidth = 1)
+                    ax.plot(x, min_[checkpoint][tuple([(a,b) for a,b in interest[n].items()])], colors[n], linewidth = 1)
+                else:
+                    ax.plot(x, avg[checkpoint][interest[n]], '-' + colors[n], linewidth = 1)
+                    ax.plot(x, max_[checkpoint][interest[n]], colors[n], linewidth = 1)
+                    ax.plot(x, min_[checkpoint][interest[n]], colors[n], linewidth = 1)
+            plt.grid(True)
+            filename = filePrefix + str(nR) + 'single'+'.png'
+            plt.savefig(filename, dpi=300)
+            print("Singleplot ", str(nR) + ' saved')
+        if recordHistorys: allHistories.append(repeatHistory)
 
     # print([sum(return_dict.values()[i]) for i in range(nActors)])
 

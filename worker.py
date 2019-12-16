@@ -3,13 +3,13 @@ import math
 from collections import deque
 import random
 
-def worker(fitnessCheck, parameters, nGames, classDict):
+def worker(fitnessCheck, parameters, nGames, classDict, complexity):
     CardClass = classDict['Card']
     DrawPileClass = classDict['DrawPile']
     DiscardPileClass = classDict['DiscardPile']
     PlayerClass = classDict['Player']
-    playerInst = PlayerClass(None, True)
-    bot = PlayerClass(parameters[0])
+    playerInst = PlayerClass(None, container = True)
+    bot = PlayerClass(parameters[0], complexity = complexity)
     playerInst.all_.append(bot)
     playerInst.bot = bot
     p2 = PlayerClass(parameters[1])

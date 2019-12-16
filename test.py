@@ -1,5 +1,5 @@
-import random
-a = [list()]
-b = [[random.randint(0,1) for i in range(3)] for j in range(3)]
-c = a + b
-print(c)
+import numpy as np
+arrays = np.array([np.array(range(5)) for i in range(10)])
+
+a = np.average(arrays, axis = 0)
+print(a)
