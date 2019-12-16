@@ -61,7 +61,7 @@ class Evo:
         self.nParameters = 53
         self.nGen = 25
         self.parmRange = 10
-        self.fInterval = self.nGames*self.nActors/1
+        self.fInterval = self.nGames*self.nActors/500
 
     def deapSetup(self, fitnessCheck):
         # deap class creation
