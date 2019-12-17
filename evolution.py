@@ -20,7 +20,6 @@ import numpy
         #rather than having a coefficient for all possible functional forms, randomize the choice of functional
             #only cross breed species with matching functional forms
             #mutuate children from loners
-        #give opposing players parameters from other actors
         #write results to a file
         #random include or drop various nodes to determine which are necesarry?
         #implement graphing of results
@@ -45,11 +44,11 @@ class Evo:
         if nActors != 0:
             self.nActors = nActors
         else:
-            self.nActors = 50
+            self.nActors = 25
         if nGames != 0:
             self.nGames = nGames
         else:
-            self.nGames = 1000
+            self.nGames = 50
         if sigma != 0:
             self.sigma = sigma
         else:
@@ -59,7 +58,7 @@ class Evo:
         else:
             self.complexity = {'bot hand only':False, 'positive only':False, 'direct only':False, 'color':True}
         self.nParameters = 53
-        self.nGen = 25
+        self.nGen = 50
         self.parmRange = 10
         self.fInterval = self.nGames*self.nActors/500
 
@@ -139,7 +138,7 @@ class Evo:
             # self.gausMutation(offspring)
             # self.zeroMutation(offspring)
             self.comboMutation(offspring)
-            self.crossBreed(offspring)
+            # self.crossBreed(offspring)
 
             invalid_ind = [ind for ind in offspring if not ind.fitness.valid]
             fits = self.poolfoo(invalid_ind, fitnessCheck, classDict)
@@ -156,17 +155,17 @@ class Evo:
             self.std[self.iteration] = numpy.std(population)
             end = time.time()
 
-            if recordHistorys: genHistories.append(numpy.average(numpy.array([ind for ind in population]), axis=0))
+            if recordHistorys: genHistory.append(numpy.average(numpy.array([ind for ind in population]), axis=0))
 
 
-            # print('it:', self.iteration, 'time:', int(end-start))
+            print('it:', self.iteration, 'time:', int(end-start))
             # self.calcStats(population)
             # print()
         # self.plotstuff()
         self.toolbox.poolclose()
 
         if recordHistorys:
-            return self.logbook, genHistories
+            return self.logbook, genHistory
         return self.logbook, None
 
     def calcStats(self, population):
@@ -218,7 +217,7 @@ class Evo:
         condition = True
         while condition:
             try:
-                fits = self.toolbox.starmap_async(worker.worker, argIt).get(timeout=self.fInterval)
+                fits = self.toolbox.starmap_async(worker.thread, argIt).get(timeout=self.fInterval)
                 condition = False
             except multiprocessing.TimeoutError:
                 print('TimedOut')
